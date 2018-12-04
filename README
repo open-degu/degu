@@ -1,0 +1,3 @@
+$ link.sh
+$ source env.sh
+$ build.sh
