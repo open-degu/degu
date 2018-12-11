@@ -14,9 +14,16 @@ zp: dirs
 mp:
 	make -C micropython/ports/zephyr BOARD=degu_evk EXTERNAL_PROJECT_PATH_OPENTHREAD=$(OT_DIR)
 
+PATCH = $(wildcard $(DEGU_DIR)/patch/*.patch)
+
+define apply_patch
+	@patch -d$(ZP_DIR) -N -p1 < $(1); then echo 'patch alrady applied'; fi
+endef
+
 patch:
-	patch -d$(ZP_DIR) -N -p1 < $(wildcard $(DEGU_DIR)/patch/*); then echo 'patch alrady applied'; fi
+	$(foreach p, $(wildcard $(DEGU_DIR)/patch/*.patch), $(call apply_patch, $(p)))
 
 clean:
 	rm -rf build
 	make -C micropython/ports/zephyr clean
+	make -C openthread clean
