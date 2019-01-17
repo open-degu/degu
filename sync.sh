@@ -1,6 +1,18 @@
 #!/bin/bash
 
-git clone --depth 1 git://sv-scm/git/ohsawa/zephyr.git
-git clone https://github.com/openthread/openthread.git
-git --git-dir=${PWD}/openthread/.git --work-tree=${PWD}/openthread/ checkout 301888
-git clone --depth 1 git://sv-scm/git/ohsawa/micropython.git
+function clone(){
+	if [ ! -e $1 ]; then
+		git clone --depth 1 $@
+	fi
+}
+
+function sync(){
+	git --git-dir=${PWD}/$1/.git --work-tree=${PWD}/$1/ remote update
+	git --git-dir=${PWD}/$1/.git --work-tree=${PWD}/$1/ checkout $2
+}
+
+clone zephyr git://sv-scm/git/ohsawa/zephyr.git
+clone openthread https://github.com/openthread/openthread.git
+sync openthread 301888
+clone micropython git://sv-scm/git/ohsawa/micropython.git
+sync micropython 20190117
