@@ -5,6 +5,8 @@ ZP_DIR = $(abspath ./zephyr)
 MP_DIR = $(abspath ./micropython)
 DEGU_DIR = $(CURDIR)
 
+CMAKE_BUILD_TYPE := Debug #we still not release it.
+
 all: patch mp
 
 zp: dirs
@@ -12,7 +14,7 @@ zp: dirs
 	ninja -C build
 
 mp:
-	make -C micropython/ports/zephyr BOARD=degu_evk EXTERNAL_PROJECT_PATH_OPENTHREAD=$(OT_DIR)
+	make -C micropython/ports/zephyr CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) BOARD=degu_evk EXTERNAL_PROJECT_PATH_OPENTHREAD=$(OT_DIR)
 
 PATCH = $(wildcard $(DEGU_DIR)/patch/*.patch)
 
