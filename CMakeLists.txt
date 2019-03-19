@@ -1,22 +1,23 @@
-cmake_minimum_required(VERSION 3.8.2)
-
-macro(set_conf_file)
-  if(EXISTS ${APPLICATION_SOURCE_DIR}/prj_${BOARD}.conf)
-    set(CONF_FILE "${APPLICATION_SOURCE_DIR}/prj_${BOARD}.conf")
-  elseif(EXISTS ${APPLICATION_SOURCE_DIR}/boards/${BOARD}.conf)
-    set(CONF_FILE
-      "prj.conf ${APPLICATION_SOURCE_DIR}/boards/${BOARD}.conf")
-  else()
-    set(CONF_FILE "prj.conf")
-  endif()
-endmacro()
+cmake_minimum_required(VERSION 3.8)
 
 include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
-project(echo_client)
+project(NONE)
 
-target_sources(                     app PRIVATE src/echo-client.c)
-target_sources_ifdef(CONFIG_NET_UDP app PRIVATE src/udp.c)
-target_sources_ifdef(CONFIG_NET_TCP app PRIVATE src/tcp.c)
-target_sources_ifdef(CONFIG_NET_VLAN app PRIVATE src/vlan.c)
+target_sources(app PRIVATE src/zephyr_start.c src/zephyr_getchar.c)
 
-include($ENV{ZEPHYR_BASE}/samples/net/common/common.cmake)
+add_library(libmicropython STATIC IMPORTED)
+set_target_properties(libmicropython PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libmicropython.a)
+target_link_libraries(app PUBLIC libmicropython)
+
+zephyr_get_include_directories_for_lang_as_string(C includes)
+zephyr_get_system_include_directories_for_lang_as_string(C system_includes)
+zephyr_get_compile_definitions_for_lang_as_string(C definitions)
+zephyr_get_compile_options_for_lang_as_string(C options)
+
+add_custom_target(
+  outputexports
+  COMMAND echo CC="${CMAKE_C_COMPILER}"
+  COMMAND echo Z_CFLAGS=${system_includes} ${includes} ${definitions} ${options}
+  VERBATIM
+  USES_TERMINAL
+)
