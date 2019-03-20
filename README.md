@@ -1,3 +1,5 @@
+[![Degu logo](doc/images/degu_logo.png)](https://open-degu.com)
+
 Degu
 ========
 
