@@ -1,0 +1,17 @@
+*.o
+*.a
+*.elf
+*.bin
+*.map
+*.hex
+*.dis
+*.exe
+
+build/
+outdir/
+prj_degu_evk_merged.conf
+
+GPATH
+GRTAGS
+GSYMS
+GTAGS
