@@ -1,0 +1,9 @@
+[submodule "zephyr"]
+	path = zephyr
+	url = git://sv-scm/git/ohsawa/zephyr.git
+[submodule "openthread"]
+	path = openthread
+	url = https://github.com/openthread/openthread.git
+[submodule "micropython"]
+	path = micropython
+	url = https://github.com/micropython/micropython.git
