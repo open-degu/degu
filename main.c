@@ -1,3 +1,4 @@
+// -*- tab-width : 4 -*-
 /*
  * This file is part of the MicroPython project, http://micropython.org/
  *
@@ -78,6 +79,51 @@ void init_zephyr(void) {
 #endif
 }
 
+int exec_from_buffer(char* buf, size_t len) {
+		nlr_buf_t nlr;
+
+	const mp_parse_input_kind_t input_kind = MP_PARSE_FILE_INPUT;
+	mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, buf, len, 0);
+	if (lex == NULL) {
+		printf("MemoryError: lexer could not allocate memory\n");
+		return -1;
+	}
+
+	if (nlr_push(&nlr) == 0) {
+		qstr source_name = lex->source_name;
+		mp_parse_tree_t pn = mp_parse(lex, input_kind);
+		mp_obj_t module_fun = mp_compile(&pn, source_name, MP_EMIT_OPT_NONE, true);
+		mp_call_function_0(module_fun);
+		nlr_pop();
+	} else {
+		return -1;
+	}
+	return 0;
+}
+
+int bg_main(char *src, size_t len) {
+    int stack_dummy;
+
+    stack_top = (char*)&stack_dummy;
+    mp_stack_set_top(stack_top);
+    // Make MicroPython's stack limit somewhat smaller than full stack available
+    mp_stack_set_limit(CONFIG_MAIN_STACK_SIZE - 512);
+
+    init_zephyr();
+
+soft_reset:
+    #if MICROPY_ENABLE_GC
+    gc_init(heap, heap + sizeof(heap));
+    #endif
+    mp_init();
+    mp_obj_list_init(mp_sys_path, 0);
+    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_)); // current dir (or base dir of the script)
+    mp_obj_list_init(mp_sys_argv, 0);
+    exec_from_buffer(src, len);
+    return 0;
+}
+
+
 int real_main(void) {
     int stack_dummy;
     stack_top = (char*)&stack_dummy;
@@ -102,10 +148,6 @@ soft_reset:
     mp_obj_list_init(mp_sys_path, 0);
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_)); // current dir (or base dir of the script)
     mp_obj_list_init(mp_sys_argv, 0);
-
-    #if MICROPY_MODULE_FROZEN
-    pyexec_frozen_module("main.py");
-    #endif
 
     for (;;) {
         if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
