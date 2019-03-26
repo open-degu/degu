@@ -7,7 +7,7 @@
 #
 BOARD ?= degu_evk
 EXTERNAL_PROJECT_PATH_OPENTHREAD ?= $(abspath ./openthread)
-CMAKE_BUILD_TYPE ?= Debug
+CMAKE_BUILD_TYPE ?= Release
 CONF_FILE = prj_$(BOARD)_merged.conf
 OUTDIR_PREFIX = $(BOARD)
 
@@ -109,3 +109,6 @@ outdir/$(BOARD)/Makefile: $(CONF_FILE)
 $(Z_EXPORTS): outdir/$(BOARD)/Makefile
 	make --no-print-directory -C outdir/$(BOARD) outputexports CMAKE_COMMAND=: >$@
 	make -C outdir/$(BOARD) syscall_macros_h_target syscall_list_h_target kobj_types_h_target
+
+degu.bin: outdir/$(BOARD)/zephyr/zephyr.bin zephyr
+	./scripts/imgtool.py sign --key root-rsa-2048.pem --header-size 0x200 --align 8 --version 1.0 --slot-size 0x6e000 $< $@
