@@ -7,7 +7,7 @@
 #
 BOARD ?= degu_evk
 EXTERNAL_PROJECT_PATH_OPENTHREAD ?= $(abspath ./openthread)
-CMAKE_BUILD_TYPE ?= Release
+CMAKE_BUILD_TYPE ?= MinSizeRel
 CONF_FILE = prj_$(BOARD)_merged.conf
 OUTDIR_PREFIX = $(BOARD)
 
