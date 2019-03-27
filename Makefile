@@ -37,6 +37,7 @@ INC += -I$(ZEPHYR_BASE)/net/ip/contiki
 INC += -I$(ZEPHYR_BASE)/net/ip/contiki/os
 
 SRC_C = main.c \
+	eui64.c \
 	help.c \
 	modusocket.c \
 	modutime.c \
