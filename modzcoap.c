@@ -15,7 +15,7 @@
 #include <net/udp.h>
 #include <net/coap.h>
 
-#include "eui64.h"
+#include "degu_utils.h"
 
 #define RAISE_ERRNO(x) { int _err = x; if (_err < 0) mp_raise_OSError(-_err); }
 #define RAISE_SYSCALL_ERRNO(x) { if ((int)(x) == -1) mp_raise_OSError(errno); }
