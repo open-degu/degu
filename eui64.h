@@ -23,3 +23,4 @@
  */
 
 void get_eui64(char *eui64);
+char *get_gw_addr(int prefix);

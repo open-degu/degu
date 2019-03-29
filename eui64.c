@@ -24,6 +24,7 @@
 #include <net/net_ip.h>
 #include <net/net_if.h>
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
+extern char *net_sprint_addr(sa_family_t af, const void *addr);
 
 void get_eui64(char *eui64)
 {
@@ -39,4 +40,35 @@ void get_eui64(char *eui64)
 		buf = net_byte_to_hex(buf, byte, 'A', true);
 		(*buf)++;
 	}
+}
+
+char *get_gw_addr(unsigned int prefix)
+{
+	struct net_if *iface;
+	struct net_if_ipv6 *ipv6;
+	struct net_if_addr *unicast;
+	int i;
+
+	iface = net_if_get_by_index(0);
+	ipv6 = iface->config.ip.ipv6;
+
+	for (i = 0; ipv6 && i < NET_IF_MAX_IPV6_ADDR; i++) {
+		unicast = &ipv6->unicast[i];
+
+		if (!unicast->is_used) {
+			continue;
+		}
+
+		if (unicast->address.in6_addr.s6_addr[0] == 0xfd) {
+			for (i = 0; i < 16; i++) {
+				if (i >= prefix / 8) {
+					unicast->address.in6_addr.s6_addr[i] = 0x00;
+				}
+			}
+			unicast->address.in6_addr.s6_addr[15] += 1;
+			return net_sprint_addr(AF_INET6, &unicast->address.in6_addr);
+		}
+	}
+
+	return NULL;
 }

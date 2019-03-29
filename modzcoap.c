@@ -198,6 +198,19 @@ STATIC mp_obj_t coap_eui64(void) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(coap_eui64_obj, coap_eui64);
 
+STATIC mp_obj_t coap_gw_addr(void) {
+	char gw_addr[NET_IPV6_ADDR_LEN];
+	strcpy(gw_addr, get_gw_addr(64));
+
+	if (gw_addr != NULL) {
+		return mp_obj_new_str(gw_addr, strlen(gw_addr));
+	}
+	else {
+		return mp_const_none;
+	}
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(coap_gw_addr_obj, coap_gw_addr);
+
 STATIC const mp_rom_map_elem_t coap_locals_dict_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&coap_close_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&coap_close_obj) },
@@ -219,6 +232,7 @@ STATIC const mp_rom_map_elem_t zcoap_globals_table[] = {
 	{MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_zcoap) },
 	{MP_ROM_QSTR(MP_QSTR_client), MP_ROM_PTR(&coap_type) },
 	{MP_ROM_QSTR(MP_QSTR_eui64), MP_ROM_PTR(&coap_eui64_obj) },
+	{MP_ROM_QSTR(MP_QSTR_gw_addr), MP_ROM_PTR(&coap_gw_addr_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT (mp_module_zcoap_globals, zcoap_globals_table);
