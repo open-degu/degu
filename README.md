@@ -17,7 +17,7 @@ To build Degu firmware, run:
 
     ./build.sh
 
-After, you can get Degu firmware image as ./outdir/degu_evk/zephyr/zephyr.hex.
+After, you can get Degu firmware image as degu.bin .
 
 Information
 --------
