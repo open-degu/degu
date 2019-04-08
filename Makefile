@@ -112,4 +112,4 @@ $(Z_EXPORTS): outdir/$(BOARD)/Makefile
 	make -C outdir/$(BOARD) syscall_macros_h_target syscall_list_h_target kobj_types_h_target
 
 degu.bin: outdir/$(BOARD)/zephyr/zephyr.bin
-	./scripts/imgtool.py sign --key root-rsa-2048.pem --header-size 0x200 --align 8 --version 1.0 --slot-size 0x6e000 $< $@
+	./tools/imgtool.py sign --key root-rsa-2048.pem --header-size 0x200 --align 8 --version 1.0 --slot-size 0x6e000 $< $@
