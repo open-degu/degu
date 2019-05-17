@@ -11,7 +11,7 @@ Building
 To prepare for building, install Zephyr SDK and setting up build environment follow
 instrction of Zephyr Project Getting Started.
 
-https://www.zephyrproject.org/doc/getting_started/getting_started.html
+https://docs.zephyrproject.org/latest/getting_started/installation_linux.html
 
 To build Degu firmware, run:
 
