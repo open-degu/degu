@@ -61,7 +61,7 @@ STATIC mp_obj_t coap_dump(void) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(coap_dump_obj, coap_dump);
 
-#define MAX_COAP_MSG_LEN 256
+#define MAX_COAP_MSG_LEN 1152
 #define COAP_TYPE_CON 0 //Confirmable
 #define COAP_TYPE_NCON 1 //non-Confirmable
 #define COAP_TYPE_ACK 2 //Acknowledgement
