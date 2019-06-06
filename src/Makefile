@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-obj-y += zephyr_start.o zephyr_getchar.o
+obj-y += zephyr_start.o zephyr_getchar.o debug_tool.o
