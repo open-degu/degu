@@ -13,13 +13,75 @@
 #include <display/grove_lcd.h>
 #include <misc/util.h>
 
-#include "grove_lcd.h"
-
 #define LOG_LEVEL CONFIG_DISPLAY_LOG_LEVEL
 #include <logging/log.h>
-
 #define I2C_DEV "I2C_1"
 LOG_MODULE_REGISTER(grove_lcd);
+
+#define SLEEP_IN_US(_x_)	((_x_) * 1000)
+
+#define GROVE_LCD_DISPLAY_ADDR		(0x3E)
+#define GROVE_RGB_BACKLIGHT_ADDR	(0x62)
+
+struct command {
+	u8_t control;
+	u8_t data;
+};
+
+struct glcd_data {
+	struct device *i2c;
+	u8_t input_set;
+	u8_t display_switch;
+	u8_t function;
+};
+
+struct glcd_driver {
+	u16_t	lcd_addr;
+	u16_t	rgb_addr;
+};
+
+
+#define ON	0x1
+#define OFF	0x0
+
+/********************************************
+ *  LCD FUNCTIONS
+ *******************************************/
+
+/* GLCD_CMD_SCREEN_CLEAR has no options */
+/* GLCD_CMD_CURSOR_RETURN has no options */
+
+/* Defines for the GLCD_CMD_CURSOR_SHIFT */
+#define GLCD_CS_DISPLAY_SHIFT		(1 << 3)
+#define GLCD_CS_RIGHT_SHIFT		(1 << 2)
+
+/* LCD Display Commands */
+#define GLCD_CMD_SCREEN_CLEAR		(1 << 0)
+#define GLCD_CMD_CURSOR_RETURN		(1 << 1)
+#define GLCD_CMD_INPUT_SET		(1 << 2)
+#define GLCD_CMD_DISPLAY_SWITCH		(1 << 3)
+#define GLCD_CMD_CURSOR_SHIFT		(1 << 4)
+#define GLCD_CMD_FUNCTION_SET		(1 << 5)
+#define GLCD_CMD_SET_CGRAM_ADDR		(1 << 6)
+#define GLCD_CMD_SET_DDRAM_ADDR		(1 << 7)
+
+
+/********************************************
+ *  RGB FUNCTIONS
+ *******************************************/
+
+#define REGISTER_POWER  0x08
+#define REGISTER_R	0x04
+#define REGISTER_G	0x03
+#define REGISTER_B	0x02
+
+static u8_t color_define[][3] = {
+	{ 255, 255, 255 },	/* white */
+	{ 255, 0,   0   },      /* red */
+	{ 0,   255, 0   },      /* green */
+	{ 0,   0,   255 },      /* blue */
+};
+
 
 /********************************************
  *  PRIVATE FUNCTIONS
@@ -36,6 +98,7 @@ static inline void _sleep(u32_t sleep_in_ms)
 {
 	k_busy_wait(SLEEP_IN_US(sleep_in_ms));
 }
+
 
 /********************************************
  *  PUBLIC FUNCTIONS
@@ -75,6 +138,7 @@ void glcd_cursor_pos_set(struct device *port, u8_t col, u8_t row)
 	i2c_write(dev->i2c, data, 2, rom->lcd_addr);
 }
 
+
 void glcd_clear(struct device *port)
 {
 	const struct glcd_driver * const rom = (struct glcd_driver *)
@@ -86,6 +150,7 @@ void glcd_clear(struct device *port)
 	LOG_DBG("clear, delay 20 ms");
 	_sleep(20);
 }
+
 
 void glcd_display_state_set(struct device *port, u8_t opt)
 {
@@ -103,12 +168,14 @@ void glcd_display_state_set(struct device *port, u8_t opt)
 	_sleep(5);
 }
 
+
 u8_t glcd_display_state_get(struct device *port)
 {
 	struct glcd_data *dev = port->driver_data;
 
 	return dev->display_switch;
 }
+
 
 void glcd_input_state_set(struct device *port, u8_t opt)
 {
@@ -124,12 +191,14 @@ void glcd_input_state_set(struct device *port, u8_t opt)
 	LOG_DBG("set the input_set, no delay");
 }
 
+
 u8_t glcd_input_state_get(struct device *port)
 {
 	struct glcd_data *dev = port->driver_data;
 
 	return dev->input_set;
 }
+
 
 void glcd_color_select(struct device *port, u8_t color)
 {
@@ -142,6 +211,7 @@ void glcd_color_select(struct device *port, u8_t color)
 			     color_define[color][2]);
 }
 
+
 void glcd_color_set(struct device *port, u8_t r, u8_t g, u8_t b)
 {
 	struct glcd_data * const dev = port->driver_data;
@@ -150,6 +220,7 @@ void glcd_color_set(struct device *port, u8_t r, u8_t g, u8_t b)
 	_rgb_reg_set(dev->i2c, REGISTER_G, g);
 	_rgb_reg_set(dev->i2c, REGISTER_B, b);
 }
+
 
 void glcd_function_set(struct device *port, u8_t opt)
 {
@@ -166,12 +237,14 @@ void glcd_function_set(struct device *port, u8_t opt)
 	_sleep(5);
 }
 
+
 u8_t glcd_function_get(struct device *port)
 {
 	struct glcd_data *dev = port->driver_data;
 
 	return dev->function;
 }
+
 
 int glcd_initialize(struct device *port)
 {
@@ -193,6 +266,7 @@ int glcd_initialize(struct device *port)
 	if (!dev->i2c) {
 		return -EPERM;
 	}
+
 
 	/*
 	 * Initialization sequence from the data sheet:

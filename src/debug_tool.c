@@ -59,7 +59,6 @@ otInstance *mOtInstance;
 bool is_pressed = false;
 bool is_start = false;
 struct device *gpio1;
-const struct shell *pShell = NULL;
 u32_t sw;
 #endif
 
@@ -68,17 +67,17 @@ char print_tx_power[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
 char print_average_rssi[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
 char print_last_rssi[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
 char mac_addr[(OT_EXT_ADDRESS_SIZE * 2) + 1] = {0};
+char gw_addr[NET_IPV6_ADDR_LEN] = {0};
 
 struct device *glcd;
 
-int shell_cmds_init(otInstance *aInstance){
+int shell_cmds_init(otInstance *aInstance)
+{
 	mOtInstance = aInstance;
-	if (pShell != NULL) {
-		shell_print(pShell, "shell_cmds_init");
-	}
 }
 
-static void desplayLCD(int8_t index){
+static void desplayLCD(int8_t index)
+{
 	glcd_cursor_pos_set(glcd, 0, 0);
 	glcd_clear(glcd);
 	switch (index) {
@@ -108,6 +107,16 @@ static void desplayLCD(int8_t index){
 	return;
 }
 
+static void desplayShellPrint(const struct shell *shell)
+{
+	shell_print(shell, "%s", print_average_rssi);
+	shell_print(shell, "%s", print_last_rssi);
+	shell_print(shell, "gateway address %s", gw_addr);
+	shell_print(shell, "%s", print_tx_power);
+	shell_print(shell, "%s", print_rloc16);
+	return;
+}
+
 static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
@@ -118,43 +127,34 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	otExtAddress ext_address;
 	otError error;
 
-	// Display RSSI value
+	// Get RSSI value
 	error = otThreadGetParentInfo(mOtInstance, &parent_info);
 	if (error == OT_ERROR_NONE)
     {
 		otThreadGetParentAverageRssi(mOtInstance, &average_rssi);
 		if (average_rssi != NULL) {
 			snprintk(print_average_rssi, GROVE_LCD_DISPLAY_ONELINE_MAX, "AvgRSSI=%ddBm", average_rssi);
-			shell_print(shell, "Average Rssi = %d dBm", average_rssi);
 		}
 		error = otThreadGetParentLastRssi(mOtInstance, &last_rssi);
 		if (error == OT_ERROR_NONE) {
 			snprintk(print_last_rssi, GROVE_LCD_DISPLAY_ONELINE_MAX, "LastRSSI=%ddBm", last_rssi);
-			shell_print(shell, "Last Rssi = %d dBm", last_rssi);
-		} else {
-			shell_print(shell, "Last Rssi = error : \"Unable to get RSSI data.\" or"
-			" \"aLastRssi is NULL.\" error = %d",error);
 		}
 	}
-	// Display Ping value
-	char gw_addr[NET_IPV6_ADDR_LEN];
+	// Get Ping value
 	strcpy(gw_addr, get_gw_addr(64));
-	shell_print(shell, "gateway address %s", gw_addr);
 
-	// Display TX Power value
+	// Get TX Power value
 	error = otPlatRadioGetTransmitPower(mOtInstance, &tx_power);
 	if (error == OT_ERROR_NONE) {
 		snprintk(print_tx_power, GROVE_LCD_DISPLAY_ONELINE_MAX, "txpower=%ddBm", tx_power);
-		shell_print(shell, "tx power = %d dBm", tx_power);
-	} else {
-		shell_print(shell, "rx power = error : \"aPower was NULL.\" or"
-		" \"Transmit power configuration via dBm is not implemented.\" error = %d",error);
 	}
-	// Distplay MAC address
+	// Get MAC address
 	snprintk(print_rloc16, GROVE_LCD_DISPLAY_ONELINE_MAX, "rloc16=%04x", otThreadGetRloc16(mOtInstance));
-	shell_print(shell, "%s", print_rloc16);
 
-	pShell = shell;
+	if (shell != NULL) {
+		desplayShellPrint(shell);
+	}
+
 	return 0;
 }
 
@@ -209,9 +209,7 @@ void repeat_debug_tool(void)
 		if ( ( start + 65000 ) <= k_cycle_get_32() ) {
 			if ( is_start ) {
 				gpio_pin_write(gpio1, 5, 0); // LED2 ON
-				if ( pShell != NULL ){
-					debug_tool(pShell, argc, argv);
-				}
+				debug_tool(shell, argc, argv);
 			} else {
 				gpio_pin_write(gpio1, 5, 1); // LED2 OFF
 			}
