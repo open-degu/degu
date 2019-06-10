@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 #define DEBUG_TOOL
+#define MAX_LCD_ONELINE 16
+#define MAX_DATA_INDEX 4
 
 #ifdef DEBUG_TOOL
 
@@ -57,13 +59,8 @@ bool is_start = false;
 struct device *gpio1;
 u32_t sw;
 
-char print_rloc16[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
-char print_tx_power[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
-char print_average_rssi[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
-char print_last_rssi[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
-char mac_addr[(OT_EXT_ADDRESS_SIZE * 2) + 1] = {0};
 char gw_addr[NET_IPV6_ADDR_LEN] = {0};
-
+char print_information[MAX_DATA_INDEX][MAX_LCD_ONELINE] = {0};
 struct device *glcd;
 
 int shell_cmds_init(otInstance *aInstance)
@@ -75,40 +72,22 @@ static void desplayLCD(int8_t index)
 {
 	glcd_cursor_pos_set(glcd, 0, 0);
 	glcd_clear(glcd);
-	switch (index) {
-		case 0 :
-			glcd_print(glcd, print_average_rssi, strlen(print_average_rssi));
-			glcd_cursor_pos_set(glcd, 0, 1);
-			glcd_print(glcd, print_last_rssi, strlen(print_last_rssi));
-			break;
-		case 1:
-			glcd_print(glcd, print_last_rssi, strlen(print_last_rssi));
-			glcd_cursor_pos_set(glcd, 0, 1);
-			glcd_print(glcd, print_tx_power, strlen(print_tx_power));
-			break;
-		case 2:
-			glcd_print(glcd, print_tx_power, strlen(print_tx_power));
-			glcd_cursor_pos_set(glcd, 0, 1);
-			glcd_print(glcd, print_rloc16, strlen(print_rloc16));
-			break;
-		case 3:
-			glcd_print(glcd, print_rloc16, strlen(print_rloc16));
-			glcd_cursor_pos_set(glcd, 0, 1);
-			glcd_print(glcd, print_average_rssi, strlen(print_average_rssi));
-			break;
-		default:
-			break;
+	glcd_print(glcd, print_information[index], strlen(print_information[index]));
+	glcd_cursor_pos_set(glcd, 0, 1);
+	if(MAX_DATA_INDEX > (index + 1)) {
+		glcd_print(glcd, print_information[index + 1], strlen(print_information[index + 1]));
+	} else {
+		glcd_print(glcd, print_information[0], strlen(print_information[0]));
 	}
+
 	return;
 }
 
 static void desplayShellPrint(const struct shell *shell)
 {
-	shell_print(shell, "%s", print_average_rssi);
-	shell_print(shell, "%s", print_last_rssi);
-	shell_print(shell, "gateway address %s", gw_addr);
-	shell_print(shell, "%s", print_tx_power);
-	shell_print(shell, "%s", print_rloc16);
+	for(int i = 0 ; i < MAX_DATA_INDEX ; i++){
+		shell_print(shell, "%s", print_information[i]);
+	}
 	return;
 }
 
@@ -127,12 +106,10 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	if (error == OT_ERROR_NONE)
     {
 		otThreadGetParentAverageRssi(mOtInstance, &average_rssi);
-		if (average_rssi != NULL) {
-			snprintk(print_average_rssi, GROVE_LCD_DISPLAY_ONELINE_MAX, "AvgRSSI=%ddBm", average_rssi);
-		}
+		snprintk(print_information[0], MAX_LCD_ONELINE, "AvgRSSI=%ddBm", average_rssi);
 		error = otThreadGetParentLastRssi(mOtInstance, &last_rssi);
 		if (error == OT_ERROR_NONE) {
-			snprintk(print_last_rssi, GROVE_LCD_DISPLAY_ONELINE_MAX, "LastRSSI=%ddBm", last_rssi);
+			snprintk(print_information[1], MAX_LCD_ONELINE, "LastRSSI=%ddBm", last_rssi);
 		}
 	}
 	// Get Ping value
@@ -141,10 +118,10 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	// Get TX Power value
 	error = otPlatRadioGetTransmitPower(mOtInstance, &tx_power);
 	if (error == OT_ERROR_NONE) {
-		snprintk(print_tx_power, GROVE_LCD_DISPLAY_ONELINE_MAX, "txpower=%ddBm", tx_power);
+		snprintk(print_information[2], MAX_LCD_ONELINE, "txpower=%ddBm", tx_power);
 	}
 	// Get MAC address
-	snprintk(print_rloc16, GROVE_LCD_DISPLAY_ONELINE_MAX, "rloc16=%04x", otThreadGetRloc16(mOtInstance));
+	snprintk(print_information[3], MAX_LCD_ONELINE, "rloc16=%04x", otThreadGetRloc16(mOtInstance));
 
 	if (shell != NULL) {
 		desplayShellPrint(shell);
@@ -208,7 +185,7 @@ void repeat_debug_tool(void)
 				gpio_pin_write(gpio1, 5, 1); // LED2 OFF
 			}
 			desplayLCD(count);
-			if (count < 3){
+			if (count < MAX_DATA_INDEX - 1){
 				count++;
 			} else {
 				count = 0;
