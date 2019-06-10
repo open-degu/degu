@@ -52,15 +52,10 @@
 #include <openthread/instance.h>
 
 otInstance *mOtInstance;
-
-// #define DEBUG_TOOL_SHELL
-
-#ifndef DEBUG_TOOL_SHELL
 bool is_pressed = false;
 bool is_start = false;
 struct device *gpio1;
 u32_t sw;
-#endif
 
 char print_rloc16[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
 char print_tx_power[GROVE_LCD_DISPLAY_ONELINE_MAX] = {0};
@@ -158,7 +153,6 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	return 0;
 }
 
-#ifndef DEBUG_TOOL_SHELL
 void repeat_debug_tool(void)
 {
 	const struct shell *shell;
@@ -224,6 +218,5 @@ void repeat_debug_tool(void)
 	}
 }
 K_THREAD_DEFINE(repeat_debug, 1024, repeat_debug_tool, NULL, NULL, NULL, 7, 0, K_NO_WAIT);
-#endif
 SHELL_CMD_REGISTER(debug_tool, NULL, "Debug tool to display Thread network information`", debug_tool);
 #endif
