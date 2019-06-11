@@ -68,7 +68,7 @@ int shell_cmds_init(otInstance *aInstance)
 	mOtInstance = aInstance;
 }
 
-static void desplayLCD(int8_t index)
+static void displayLCD(int8_t index)
 {
 	glcd_cursor_pos_set(glcd, 0, 0);
 	glcd_clear(glcd);
@@ -83,7 +83,7 @@ static void desplayLCD(int8_t index)
 	return;
 }
 
-static void desplayShellPrint(const struct shell *shell)
+static void displayShellPrint(const struct shell *shell)
 {
 	for(int i = 0 ; i < MAX_DATA_INDEX ; i++){
 		shell_print(shell, "%s", print_information[i]);
@@ -104,7 +104,7 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	// Get RSSI value
 	error = otThreadGetParentInfo(mOtInstance, &parent_info);
 	if (error == OT_ERROR_NONE)
-    {
+	{
 		otThreadGetParentAverageRssi(mOtInstance, &average_rssi);
 		snprintk(print_information[0], MAX_LCD_ONELINE, "AvgRSSI=%ddBm", average_rssi);
 		error = otThreadGetParentLastRssi(mOtInstance, &last_rssi);
@@ -124,7 +124,7 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	snprintk(print_information[3], MAX_LCD_ONELINE, "rloc16=%04x", otThreadGetRloc16(mOtInstance));
 
 	if (shell != NULL) {
-		desplayShellPrint(shell);
+		displayShellPrint(shell);
 	}
 
 	return 0;
@@ -161,16 +161,14 @@ void repeat_debug_tool(void)
 	while (1) {
 		gpio_pin_read(gpio1, 14, &sw);
 		if ( sw == 0 ) {
-			if(!is_pressed){
-				if (is_start) {
-					is_start = false;
-					gpio_pin_write(gpio1, 7, 1); // LED1 OFF
-				} else {
-					is_start = true;
-					gpio_pin_write(gpio1, 7, 0); // LED1 ON
-					gpio_pin_write(gpio1, 5, 0); // LED2 ON
-					start = k_cycle_get_32();
-				}
+			if(!is_pressed && is_start){
+				is_start = false;
+				gpio_pin_write(gpio1, 7, 1); // LED1 OFF
+			} else {
+				is_start = true;
+				gpio_pin_write(gpio1, 7, 0); // LED1 ON
+				gpio_pin_write(gpio1, 5, 0); // LED2 ON
+				start = k_cycle_get_32();
 			}
 			is_pressed = true;
 		} else {
@@ -184,7 +182,7 @@ void repeat_debug_tool(void)
 			} else {
 				gpio_pin_write(gpio1, 5, 1); // LED2 OFF
 			}
-			desplayLCD(count);
+			displayLCD(count);
 			if (count < MAX_DATA_INDEX - 1){
 				count++;
 			} else {
@@ -194,6 +192,7 @@ void repeat_debug_tool(void)
 		}
 	}
 }
+
 K_THREAD_DEFINE(repeat_debug, 1024, repeat_debug_tool, NULL, NULL, NULL, 7, 0, K_NO_WAIT);
 SHELL_CMD_REGISTER(debug_tool, NULL, "Debug tool to display Thread network information`", debug_tool);
 #endif
