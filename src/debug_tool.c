@@ -68,7 +68,7 @@ int shell_cmds_init(otInstance *aInstance)
 	mOtInstance = aInstance;
 }
 
-static void displayLCD(int8_t index)
+static void display_lcd(int8_t index)
 {
 	glcd_cursor_pos_set(glcd, 0, 0);
 	glcd_clear(glcd);
@@ -83,7 +83,7 @@ static void displayLCD(int8_t index)
 	return;
 }
 
-static void displayShellPrint(const struct shell *shell)
+static void display_shell_print(const struct shell *shell)
 {
 	for(int i = 0 ; i < MAX_DATA_INDEX ; i++){
 		shell_print(shell, "%s", print_information[i]);
@@ -124,7 +124,7 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	snprintk(print_information[3], MAX_LCD_ONELINE, "rloc16=%04x", otThreadGetRloc16(mOtInstance));
 
 	if (shell != NULL) {
-		displayShellPrint(shell);
+		display_shell_print(shell);
 	}
 
 	return 0;
@@ -182,7 +182,7 @@ void repeat_debug_tool(void)
 			} else {
 				gpio_pin_write(gpio1, 5, 1); // LED2 OFF
 			}
-			displayLCD(count);
+			display_lcd(count);
 			if (count < MAX_DATA_INDEX - 1){
 				count++;
 			} else {
