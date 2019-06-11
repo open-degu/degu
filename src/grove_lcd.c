@@ -261,6 +261,12 @@ int glcd_initialize(struct device *port)
 	return 0;
 }
 
+
+static const struct glcd_driver grove_lcd_config = {
+	.lcd_addr = GROVE_LCD_DISPLAY_ADDR,
+};
+
+
 static struct glcd_data grove_lcd_driver = {
 	.i2c = NULL,
 	.input_set = 0,
