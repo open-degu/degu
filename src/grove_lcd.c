@@ -64,14 +64,6 @@ struct glcd_driver {
 #define GLCD_CMD_SET_DDRAM_ADDR		(1 << 7)
 
 
-static u8_t color_define[][3] = {
-	{ 255, 255, 255 },	/* white */
-	{ 255, 0,   0   },      /* red */
-	{ 0,   255, 0   },      /* green */
-	{ 0,   0,   255 },      /* blue */
-};
-
-
 /********************************************
  *  PRIVATE FUNCTIONS
  *******************************************/
