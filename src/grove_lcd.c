@@ -21,7 +21,6 @@ LOG_MODULE_REGISTER(grove_lcd);
 #define SLEEP_IN_US(_x_)	((_x_) * 1000)
 
 #define GROVE_LCD_DISPLAY_ADDR		(0x3E)
-#define GROVE_RGB_BACKLIGHT_ADDR	(0x62)
 
 struct command {
 	u8_t control;
@@ -37,7 +36,6 @@ struct glcd_data {
 
 struct glcd_driver {
 	u16_t	lcd_addr;
-	u16_t	rgb_addr;
 };
 
 
@@ -66,15 +64,6 @@ struct glcd_driver {
 #define GLCD_CMD_SET_DDRAM_ADDR		(1 << 7)
 
 
-/********************************************
- *  RGB FUNCTIONS
- *******************************************/
-
-#define REGISTER_POWER  0x08
-#define REGISTER_R	0x04
-#define REGISTER_G	0x03
-#define REGISTER_B	0x02
-
 static u8_t color_define[][3] = {
 	{ 255, 255, 255 },	/* white */
 	{ 255, 0,   0   },      /* red */
@@ -86,14 +75,6 @@ static u8_t color_define[][3] = {
 /********************************************
  *  PRIVATE FUNCTIONS
  *******************************************/
-static void _rgb_reg_set(struct device * const i2c, u8_t addr, u8_t dta)
-{
-	u8_t data[2] = { addr, dta };
-
-	i2c_write(i2c, data, sizeof(data), GROVE_RGB_BACKLIGHT_ADDR);
-}
-
-
 static inline void _sleep(u32_t sleep_in_ms)
 {
 	k_busy_wait(SLEEP_IN_US(sleep_in_ms));
@@ -200,28 +181,6 @@ u8_t glcd_input_state_get(struct device *port)
 }
 
 
-void glcd_color_select(struct device *port, u8_t color)
-{
-	if (color > 3) {
-		LOG_WRN("selected color is too high a value");
-		return;
-	}
-	glcd_color_set(port, color_define[color][0],
-			     color_define[color][1],
-			     color_define[color][2]);
-}
-
-
-void glcd_color_set(struct device *port, u8_t r, u8_t g, u8_t b)
-{
-	struct glcd_data * const dev = port->driver_data;
-
-	_rgb_reg_set(dev->i2c, REGISTER_R, r);
-	_rgb_reg_set(dev->i2c, REGISTER_G, g);
-	_rgb_reg_set(dev->i2c, REGISTER_B, b);
-}
-
-
 void glcd_function_set(struct device *port, u8_t opt)
 {
 	const struct glcd_driver * const rom = port->config->config_info;
@@ -307,25 +266,8 @@ int glcd_initialize(struct device *port)
 
 	glcd_input_state_set(port, cmd);
 
-	/* Now power on the background RGB control */
-	LOG_INF("configuring the RGB background");
-	_rgb_reg_set(dev->i2c, 0x00, 0x00);
-	_rgb_reg_set(dev->i2c, 0x01, 0x05);
-	_rgb_reg_set(dev->i2c, 0x08, 0xAA);
-
-	/* Now set the background color to white */
-	LOG_DBG("background set to white");
-	_rgb_reg_set(dev->i2c, REGISTER_R, color_define[GROVE_RGB_WHITE][0]);
-	_rgb_reg_set(dev->i2c, REGISTER_G, color_define[GROVE_RGB_WHITE][1]);
-	_rgb_reg_set(dev->i2c, REGISTER_B, color_define[GROVE_RGB_WHITE][2]);
-
 	return 0;
 }
-
-static const struct glcd_driver grove_lcd_config = {
-	.lcd_addr = GROVE_LCD_DISPLAY_ADDR,
-	.rgb_addr = GROVE_RGB_BACKLIGHT_ADDR,
-};
 
 static struct glcd_data grove_lcd_driver = {
 	.i2c = NULL,
