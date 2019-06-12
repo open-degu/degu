@@ -27,6 +27,11 @@
 #define MAX_LCD_ONELINE 17
 #define MAX_DATA_INDEX 6
 
+#define GPIO_LED1 7
+#define GPIO_LED2 5
+#define GPIO_SW1 6
+#define GPIO_SW2 8
+
 #ifdef DEBUG_TOOL
 
 #include <zephyr.h>
@@ -89,8 +94,6 @@ static void display_lcd(int8_t index)
 	glcd_cursor_pos_set(glcd, 0, 1);
 	if(MAX_DATA_INDEX > (index + 1)) {
 		glcd_print(glcd, print_information[index + 1], strlen(print_information[index + 1]));
-	} else {
-		// glcd_print(glcd, print_information[0], strlen(print_information[0]));
 	}
 
 	return;
@@ -166,7 +169,6 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 			break;
 #endif // OPENTHREAD_FTD
 		default:
-			snprintk(print_information[5], MAX_LCD_ONELINE, "state%11s", "invalid");
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state    invalid");
 			break;
 	}
@@ -202,15 +204,15 @@ void repeat_debug_tool(void)
 
 	gpio0 = device_get_binding(DT_GPIO_P0_DEV_NAME);
 	gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
-	// gpio_pin_configure(gpio1, 14, GPIO_DIR_IN | GPIO_PUD_PULL_UP);
-	gpio_pin_configure(gpio0, 6, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
-	gpio_pin_configure(gpio0, 8, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
-	gpio_pin_configure(gpio1, 7, GPIO_DIR_OUT);
-	gpio_pin_write(gpio1, 7, 1);
+
+	gpio_pin_configure(gpio0, GPIO_SW1, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
+	gpio_pin_configure(gpio0, GPIO_SW2, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
+	gpio_pin_configure(gpio1, GPIO_LED2, GPIO_DIR_OUT);
+	gpio_pin_write(gpio1, GPIO_LED2, 1);
 
 	while (1) {
 		// check start button
-		gpio_pin_read(gpio0, 8, &sw1);
+		gpio_pin_read(gpio0, GPIO_SW1, &sw1);
 		if ( sw1 != 0 ) {
 			if(!is_pressed && is_start){
 				is_start = false;
@@ -227,10 +229,10 @@ void repeat_debug_tool(void)
 			is_pressed = false;
 		}
 		// check change display button
-		gpio_pin_read(gpio0, 6, &sw2);
+		gpio_pin_read(gpio0, GPIO_SW2, &sw2);
 		if ( sw2 != 0 && !is_first) {
 			display_lcd(count);
-			if (count < MAX_DATA_INDEX - 1){
+			if (count < MAX_DATA_INDEX - 2){
 				count = count + 2;
 			} else {
 				count = 0;
@@ -240,7 +242,7 @@ void repeat_debug_tool(void)
 		k_sleep(K_MSEC(100));
 		// run debug tool
 		if ( ( start + (65000 / 2) ) <= k_cycle_get_32() && is_start ) {
-			gpio_pin_write(gpio1, 7, 0); // LED1 ON
+			gpio_pin_write(gpio1, GPIO_LED2, 0); // LED2 ON
 		}
 		if ( ( start + 65000 ) <= k_cycle_get_32() ) {
 			if ( is_start ){
@@ -250,7 +252,7 @@ void repeat_debug_tool(void)
 				display_lcd(0);
 				is_first = false;
 			}
-			gpio_pin_write(gpio1, 7, 1); // LED1 OFF
+			gpio_pin_write(gpio1, GPIO_LED2, 1); // LED2 OFF
 			start = k_cycle_get_32();
 		}
 	}
