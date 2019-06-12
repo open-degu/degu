@@ -68,6 +68,8 @@ char gw_addr[NET_IPV6_ADDR_LEN] = {0};
 char print_information[MAX_DATA_INDEX][MAX_LCD_ONELINE] = {0};
 struct device *glcd;
 
+int8_t display_index = 0;
+
 int shell_cmds_init(otInstance *aInstance)
 {
 	mOtInstance = aInstance;
@@ -192,7 +194,6 @@ void repeat_debug_tool(void)
 	u32_t sw1,sw2;
 	u32_t start = 0;
 	u8_t set_config;
-	int8_t count = 0;
 	bool is_first = true;
 
 	glcd = device_get_binding(GROVE_LCD_NAME);
@@ -239,12 +240,12 @@ void repeat_debug_tool(void)
 		// check change display button
 		gpio_pin_read(gpio0, GPIO_SW2, &sw2);
 		if ( sw2 != 0 && !is_first) {
-			display_lcd(count);
-			if (count < MAX_DATA_INDEX - 2){
-				count = count + 2;
+			if (display_index < MAX_DATA_INDEX - 2){
+				display_index = display_index + 2;
 			} else {
-				count = 0;
+				display_index = 0;
 			}
+			display_lcd(display_index);
 			k_sleep(K_MSEC(400));
 		}
 		k_sleep(K_MSEC(100));
@@ -257,9 +258,9 @@ void repeat_debug_tool(void)
 				debug_tool(shell, argc, argv);
 			}
 			if ( is_first ) {
-				display_lcd(0);
 				is_first = false;
 			}
+			display_lcd(display_index);
 			gpio_pin_write(gpio1, GPIO_LED2, 1); // LED2 OFF
 			start = k_cycle_get_32();
 		}
