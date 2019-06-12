@@ -25,7 +25,7 @@
  */
 #define DEBUG_TOOL
 #define MAX_LCD_ONELINE 17
-#define MAX_DATA_INDEX 6
+#define MAX_DATA_INDEX 8
 
 #define GPIO_LED1 7
 #define GPIO_LED2 5
@@ -147,6 +147,14 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	if (shell != NULL) {
 		display_shell_print(shell);
 	}
+
+	// Get EUI64
+	otExtAddress extAddress;
+	otLinkGetFactoryAssignedIeeeEui64(mOtInstance, &extAddress);
+	snprintk(print_information[6], MAX_LCD_ONELINE, "eui64");
+	snprintk(print_information[7], MAX_LCD_ONELINE, "%02x%02x%02x%02x%02x%02x%02x%02x",
+			 extAddress.m8[0], extAddress.m8[1], extAddress.m8[2], extAddress.m8[3],
+			 extAddress.m8[4], extAddress.m8[5], extAddress.m8[6], extAddress.m8[7]);
 
 	// Get State
 	switch (otThreadGetDeviceRole(mOtInstance))
