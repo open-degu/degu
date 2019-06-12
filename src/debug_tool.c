@@ -25,7 +25,7 @@
  */
 #define DEBUG_TOOL
 #define MAX_LCD_ONELINE 17
-#define MAX_DATA_INDEX 8
+#define MAX_DATA_INDEX 10
 
 #define GPIO_LED1 7
 #define GPIO_LED2 5
@@ -116,11 +116,10 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 
 	int8_t tx_power, average_rssi, last_rssi;
 	otRouterInfo parent_info;
-	otExtAddress ext_address;
 	otError error;
 	char *state = "NA";
 
-	// Get Ping value
+	// TODO : Get Ping value
 	strcpy(gw_addr, get_gw_addr(64));
 
 	// Get TX Power value
@@ -141,12 +140,12 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	}
 
 	// Get EUI64
-	otExtAddress extAddress;
-	otLinkGetFactoryAssignedIeeeEui64(mOtInstance, &extAddress);
+	otExtAddress ext_address;
+	otLinkGetFactoryAssignedIeeeEui64(mOtInstance, &ext_address);
 	snprintk(print_information[6], MAX_LCD_ONELINE, "eui64");
 	snprintk(print_information[7], MAX_LCD_ONELINE, "%02x%02x%02x%02x%02x%02x%02x%02x",
-			 extAddress.m8[0], extAddress.m8[1], extAddress.m8[2], extAddress.m8[3],
-			 extAddress.m8[4], extAddress.m8[5], extAddress.m8[6], extAddress.m8[7]);
+			 ext_address.m8[0], ext_address.m8[1], ext_address.m8[2], ext_address.m8[3],
+			 ext_address.m8[4], ext_address.m8[5], ext_address.m8[6], ext_address.m8[7]);
 
 	// Get State
 	switch (otThreadGetDeviceRole(mOtInstance))
@@ -178,6 +177,7 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 			state = "In";
 			break;
 	}
+
 	// Get RSSI value
 	error = otThreadGetParentInfo(mOtInstance, &parent_info);
 	if (error == OT_ERROR_NONE)
@@ -189,6 +189,13 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 			snprintk(print_information[1], MAX_LCD_ONELINE, "LstRSSI%4ddBm|%c", last_rssi, state[1]);
 		}
 	}
+
+	// Get Child extaddr
+	otExtAddress *p_ext_address = otLinkGetExtendedAddress(mOtInstance);
+	snprintk(print_information[8], MAX_LCD_ONELINE, "extaddr");
+	snprintk(print_information[9], MAX_LCD_ONELINE, "%02x%02x%02x%02x%02x%02x%02x%02x",
+			 p_ext_address->m8[0], p_ext_address->m8[1], p_ext_address->m8[2], p_ext_address->m8[3],
+			 p_ext_address->m8[4], p_ext_address->m8[5], p_ext_address->m8[6], p_ext_address->m8[7]);
 
 	return 0;
 }
