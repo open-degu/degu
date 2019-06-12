@@ -118,18 +118,8 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	otRouterInfo parent_info;
 	otExtAddress ext_address;
 	otError error;
+	char *state = "NA";
 
-	// Get RSSI value
-	error = otThreadGetParentInfo(mOtInstance, &parent_info);
-	if (error == OT_ERROR_NONE)
-	{
-		otThreadGetParentAverageRssi(mOtInstance, &average_rssi);
-		snprintk(print_information[0], MAX_LCD_ONELINE, "AvgRSSI%6ddBm", average_rssi);
-		error = otThreadGetParentLastRssi(mOtInstance, &last_rssi);
-		if (error == OT_ERROR_NONE) {
-			snprintk(print_information[1], MAX_LCD_ONELINE, "LastRSSI%5ddBm", last_rssi);
-		}
-	}
 	// Get Ping value
 	strcpy(gw_addr, get_gw_addr(64));
 
@@ -163,24 +153,41 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	{
 		case OT_DEVICE_ROLE_DISABLED:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state   disabled" );
+			state = "Ds";
 			break;
 		case OT_DEVICE_ROLE_DETACHED:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state   detached");
+			state = "Dc";
 			break;
 		case OT_DEVICE_ROLE_CHILD:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state      child");
+			state = "Ch";
 			break;
 #if OPENTHREAD_FTD
 		case OT_DEVICE_ROLE_ROUTER:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state     router");
+			state = "Rt";
 			break;
 		case OT_DEVICE_ROLE_LEADER:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state     leader");
+			state = "Ld";
 			break;
 #endif // OPENTHREAD_FTD
 		default:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state    invalid");
+			state = "In";
 			break;
+	}
+	// Get RSSI value
+	error = otThreadGetParentInfo(mOtInstance, &parent_info);
+	if (error == OT_ERROR_NONE)
+	{
+		otThreadGetParentAverageRssi(mOtInstance, &average_rssi);
+		snprintk(print_information[0], MAX_LCD_ONELINE, "AvgRSSI%4ddBm|%c", average_rssi, state[0]);
+		error = otThreadGetParentLastRssi(mOtInstance, &last_rssi);
+		if (error == OT_ERROR_NONE) {
+			snprintk(print_information[1], MAX_LCD_ONELINE, "LstRSSI%4ddBm|%c", last_rssi, state[1]);
+		}
 	}
 
 	return 0;
