@@ -23,16 +23,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#define DEBUG_TOOL
+#define THREAD_NETWORK_ANALYZER
 #define MAX_LCD_ONELINE 17
 #define MAX_DATA_INDEX 10
 
 #define GPIO_LED1 7
 #define GPIO_LED2 5
-#define GPIO_SW1 6
-#define GPIO_SW2 8
+#define GPIO_SW 8
 
-#ifdef DEBUG_TOOL
+#ifdef THREAD_NETWORK_ANALYZER
 
 #include <zephyr.h>
 #include <console.h>
@@ -59,10 +58,7 @@
 #include <openthread/instance.h>
 
 otInstance *mOtInstance;
-bool is_pressed = false;
-bool is_start = false;
 struct device *gpio1;
-struct device *gpio0;
 
 char gw_addr[NET_IPV6_ADDR_LEN] = {0};
 char print_information[MAX_DATA_INDEX][MAX_LCD_ONELINE] = {0};
@@ -117,7 +113,6 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	int8_t tx_power, average_rssi, last_rssi;
 	otRouterInfo parent_info;
 	otError error;
-	char *state = "NA";
 
 	// TODO : Get Ping value
 	strcpy(gw_addr, get_gw_addr(64));
@@ -152,29 +147,23 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	{
 		case OT_DEVICE_ROLE_DISABLED:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state   disabled" );
-			state = "Ds";
 			break;
 		case OT_DEVICE_ROLE_DETACHED:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state   detached");
-			state = "Dc";
 			break;
 		case OT_DEVICE_ROLE_CHILD:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state      child");
-			state = "Ch";
 			break;
 #if OPENTHREAD_FTD
 		case OT_DEVICE_ROLE_ROUTER:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state     router");
-			state = "Rt";
 			break;
 		case OT_DEVICE_ROLE_LEADER:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state     leader");
-			state = "Ld";
 			break;
 #endif // OPENTHREAD_FTD
 		default:
 			snprintk(print_information[5], MAX_LCD_ONELINE, "state    invalid");
-			state = "In";
 			break;
 	}
 
@@ -183,10 +172,10 @@ static int debug_tool(const struct shell *shell, size_t argc, char **argv)
 	if (error == OT_ERROR_NONE)
 	{
 		otThreadGetParentAverageRssi(mOtInstance, &average_rssi);
-		snprintk(print_information[0], MAX_LCD_ONELINE, "AvgRSSI%4ddBm|%c", average_rssi, state[0]);
+		snprintk(print_information[0], MAX_LCD_ONELINE, "AvgRSSI%6ddBm|%c", average_rssi);
 		error = otThreadGetParentLastRssi(mOtInstance, &last_rssi);
 		if (error == OT_ERROR_NONE) {
-			snprintk(print_information[1], MAX_LCD_ONELINE, "LstRSSI%4ddBm|%c", last_rssi, state[1]);
+			snprintk(print_information[1], MAX_LCD_ONELINE, "LstRSSI%6ddBm|%c", last_rssi);
 		}
 	}
 
@@ -205,7 +194,7 @@ void repeat_debug_tool(void)
 	const struct shell *shell;
 	size_t argc = 0;
 	char **argv = NULL;
-	u32_t sw1,sw2;
+	u32_t sw;
 	u32_t start = 0;
 	u8_t set_config;
 	bool is_first = true;
@@ -225,35 +214,19 @@ void repeat_debug_tool(void)
 	glcd_display_state_set(glcd, set_config);
 	lcd_print_string("Please push the", " Start button");
 
-	gpio0 = device_get_binding(DT_GPIO_P0_DEV_NAME);
 	gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
 
-	gpio_pin_configure(gpio0, GPIO_SW1, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
-	gpio_pin_configure(gpio0, GPIO_SW2, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
+	gpio_pin_configure(gpio1, GPIO_SW, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
 	gpio_pin_configure(gpio1, GPIO_LED2, GPIO_DIR_OUT);
 	gpio_pin_write(gpio1, GPIO_LED2, 1);
 
+	start = k_cycle_get_32();
+	lcd_print_string("  Start Analys", " ");
+
 	while (1) {
-		// check start button
-		gpio_pin_read(gpio0, GPIO_SW1, &sw1);
-		if ( sw1 != 0 ) {
-			if(!is_pressed && is_start){
-				is_start = false;
-				lcd_print_string("  Stop Analys", " ");
-			} else {
-				is_start = true;
-				start = k_cycle_get_32();
-				lcd_print_string("  Start Analys"," ");
-			}
-			is_first = true;
-			is_pressed = true;
-			k_sleep(K_MSEC(400));
-		} else {
-			is_pressed = false;
-		}
 		// check change display button
-		gpio_pin_read(gpio0, GPIO_SW2, &sw2);
-		if ( sw2 != 0 && !is_first) {
+		gpio_pin_read(gpio1, GPIO_SW, &sw);
+		if ( sw != 0 && !is_first) {
 			if (display_index < MAX_DATA_INDEX - 2){
 				display_index = display_index + 2;
 			} else {
@@ -264,13 +237,11 @@ void repeat_debug_tool(void)
 		}
 		k_sleep(K_MSEC(100));
 		// run debug tool
-		if ( ( start + (65000 / 2) ) <= k_cycle_get_32() && is_start ) {
+		if ( ( start + (65000 / 2) ) <= k_cycle_get_32() ) {
 			gpio_pin_write(gpio1, GPIO_LED2, 0); // LED2 ON
 		}
 		if ( ( start + 65000 ) <= k_cycle_get_32() ) {
-			if ( is_start ){
-				debug_tool(shell, argc, argv);
-			}
+			debug_tool(shell, argc, argv);
 			if ( is_first ) {
 				is_first = false;
 			}
