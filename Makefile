@@ -48,6 +48,7 @@ SRC_C = main.c \
 	machine_i2c.c \
 	machine_adc.c \
 	machine_pin.c \
+	machine_uart.c \
 	uart_core.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/printf.c \
