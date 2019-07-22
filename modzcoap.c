@@ -70,8 +70,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(coap_dump_obj, coap_dump);
 STATIC mp_obj_t coap_request_post(mp_obj_t self_in, mp_obj_t path, mp_obj_t payload) {
 	mp_obj_coap_t *client = self_in;
 	int r;
+	int rcvd;
 	struct coap_packet request;
+	struct coap_packet reply;
 	u8_t *data;
+	const u8_t *rcv_payload;
+	u16_t payload_len;
+	u8_t str_code[5];
+	u8_t code;
 
 	data = (u8_t *)m_malloc(MAX_COAP_MSG_LEN);
 	if (!data) {
@@ -112,6 +118,25 @@ STATIC mp_obj_t coap_request_post(mp_obj_t self_in, mp_obj_t path, mp_obj_t payl
 		printf("Unable to send packet\n");
 		goto end;
 	}
+
+	rcvd = zsock_recv(client->sock, data, MAX_COAP_MSG_LEN, ZSOCK_MSG_DONTWAIT);
+	if (rcvd <= 0) {
+		printf("Unable to receive packet\n");
+		goto end;
+	}
+
+	r = coap_packet_parse(&reply, data, rcvd, NULL, 0);
+	if (r < 0) {
+		printf("Unable to parse recieved packet\n");
+		goto end;
+	}
+
+	code = coap_header_get_code(&reply);
+	sprintf(str_code, "%d.%02d", code/32, code%32);
+
+	m_free(data);
+
+	return mp_obj_new_str(str_code, strlen(str_code));
 
 end:
 	m_free(data);
