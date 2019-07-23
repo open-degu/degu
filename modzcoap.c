@@ -14,6 +14,7 @@
 #include <net/udp.h>
 #include <net/coap.h>
 
+#include "zcoap.h"
 #include "degu_utils.h"
 
 #define RAISE_ERRNO(x) { int _err = x; if (_err < 0) mp_raise_OSError(-_err); }
@@ -55,158 +56,34 @@ STATIC mp_obj_t coap_client_make_new(const mp_obj_type_t *type, size_t n_args, s
 	return MP_OBJ_FROM_PTR(client);
 }
 
-STATIC mp_obj_t coap_dump(void) {
-	printf("dump\n");
-	return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(coap_dump_obj, coap_dump);
-
-#define MAX_COAP_MSG_LEN 1152
-#define COAP_TYPE_CON 0 //Confirmable
-#define COAP_TYPE_NCON 1 //non-Confirmable
-#define COAP_TYPE_ACK 2 //Acknowledgement
-#define COAP_TYPE_RST 3 //Reset
-
 STATIC mp_obj_t coap_request_post(mp_obj_t self_in, mp_obj_t path, mp_obj_t payload) {
 	mp_obj_coap_t *client = self_in;
-	int r;
-	int rcvd;
-	struct coap_packet request;
-	struct coap_packet reply;
-	u8_t *data;
-	const u8_t *rcv_payload;
-	u16_t payload_len;
-	u8_t str_code[5];
-	u8_t code;
+	u8_t *str_code = zcoap_request_post(client->sock,
+					(u8_t *)mp_obj_str_get_str(path),
+					(u8_t *)mp_obj_str_get_str(payload));
 
-	data = (u8_t *)m_malloc(MAX_COAP_MSG_LEN);
-	if (!data) {
-		printf("can't malloc\n");
-		RAISE_SYSCALL_ERRNO(-1);
-	}
-
-	r = coap_packet_init(&request, data, MAX_COAP_MSG_LEN,
-			     1, COAP_TYPE_CON, 8, coap_next_token(),
-			     COAP_METHOD_POST, coap_next_id());
-	if (r < 0) {
-		printf("Unable to init CoAP packet\n");
-		goto end;
-	}
-
-	r = coap_packet_append_option(&request, COAP_OPTION_URI_PATH,
-				      (u8_t *)mp_obj_str_get_str(path),
-				      strlen(mp_obj_str_get_str(path)));
-	if (r < 0) {
-		printf("Unable to add option to request\n");
-		goto end;
-	}
-
-	r = coap_packet_append_payload_marker(&request);
-	if (r < 0) {
-		printf("Unable to append payload maker\n");
-		goto end;
-	}
-	r = coap_packet_append_payload(&request, (u8_t *)mp_obj_str_get_str(payload),
-				       strlen(mp_obj_str_get_str(payload)));
-	if (r < 0) {
-		printf("Unable to append payload\n");
-		goto end;
-	}
-
-	r = zsock_send(client->sock, request.data, request.offset, 0);
-	if (r < 0) {
-		printf("Unable to send packet\n");
-		goto end;
-	}
-
-	rcvd = zsock_recv(client->sock, data, MAX_COAP_MSG_LEN, ZSOCK_MSG_DONTWAIT);
-	if (rcvd <= 0) {
-		printf("Unable to receive packet\n");
-		goto end;
-	}
-
-	r = coap_packet_parse(&reply, data, rcvd, NULL, 0);
-	if (r < 0) {
-		printf("Unable to parse recieved packet\n");
-		goto end;
-	}
-
-	code = coap_header_get_code(&reply);
-	sprintf(str_code, "%d.%02d", code/32, code%32);
-
-	m_free(data);
-
-	return mp_obj_new_str(str_code, strlen(str_code));
-
-end:
-	m_free(data);
-
-	return mp_const_none;
+	if (str_code != NULL)
+		return mp_obj_new_str(str_code, strlen(str_code));
+	else
+		return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(coap_request_post_obj, coap_request_post);
 
 STATIC mp_obj_t coap_request_get(mp_obj_t self_in, mp_obj_t path) {
 	mp_obj_coap_t *client = self_in;
-	int r;
-	int rcvd;
-	struct coap_packet request;
-	struct coap_packet reply;
-	u8_t *data;
-	const u8_t *payload;
-	u16_t payload_len;
 	vstr_t vstr;
+	u16_t payload_len;
+	u8_t *payload = zcoap_request_get(client->sock,
+					(u8_t *)mp_obj_str_get_str(path), &payload_len);
 
-	data = (u8_t *)m_malloc(MAX_COAP_MSG_LEN);
-	if (!data) {
-		printf("can't malloc to send packet\n");
-		RAISE_SYSCALL_ERRNO(-1);
+	if (payload != NULL) {
+		vstr_init_len(&vstr, payload_len);
+		strcpy(vstr.buf, payload);
+		return mp_obj_new_str_from_vstr(&mp_type_str, &vstr);
 	}
-
-	r = coap_packet_init(&request, data, MAX_COAP_MSG_LEN,
-			     1, COAP_TYPE_CON, 8, coap_next_token(),
-			     COAP_METHOD_GET, coap_next_id());
-	if (r < 0) {
-		printf("Unable to init CoAP packet\n");
-		goto err;
+	else {
+		return mp_const_none;
 	}
-
-	r = coap_packet_append_option(&request, COAP_OPTION_URI_PATH,
-				      (u8_t *)mp_obj_str_get_str(path),
-				      strlen(mp_obj_str_get_str(path)));
-	if (r < 0) {
-		printf("Unable to add option to request\n");
-		goto err;
-	}
-
-	r = zsock_send(client->sock, request.data, request.offset, 0);
-	if (r < 0) {
-		printf("Unable to send CoAP packet\n");
-		goto err;
-	}
-
-	rcvd = zsock_recv(client->sock, data, MAX_COAP_MSG_LEN, ZSOCK_MSG_DONTWAIT);
-	if (rcvd <= 0) {
-		printf("Unable to receive packet\n");
-		goto err;
-	}
-
-	r = coap_packet_parse(&reply, data, rcvd, NULL, 0);
-	if (r < 0) {
-		printf("Unable to parse recieved packet\n");
-		goto err;
-	}
-
-	payload = coap_packet_get_payload(&reply, &payload_len);
-
-	vstr_init_len(&vstr, payload_len);
-	strcpy(vstr.buf, payload);
-
-	m_free(data);
-	return mp_obj_new_str_from_vstr(&mp_type_str, &vstr);
-
-err:
-	m_free(data);
-	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(coap_request_get_obj, coap_request_get);
 
@@ -241,7 +118,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(coap_gw_addr_obj, coap_gw_addr);
 STATIC const mp_rom_map_elem_t coap_locals_dict_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&coap_close_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&coap_close_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_dump), MP_ROM_PTR(&coap_dump_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_request_post), MP_ROM_PTR(&coap_request_post_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_request_get), MP_ROM_PTR(&coap_request_get_obj) },
 };
