@@ -49,8 +49,6 @@ volatile int uart_txbuf_write_cursor = 0;
 volatile int uart_txbuf_read_cursor = 0;
 
 static void uart_cb(struct device *dev){
-	u8_t recvData;
-
 	uart_irq_update(dev);
 	if(uart_irq_rx_ready(dev)){
 		uart_fifo_read(dev, (u8_t *)&uart_rxbuffer[uart_rxbuf_write_cursor], 1);
@@ -76,7 +74,6 @@ static void uart_cb(struct device *dev){
 
 static int uart_read_bytes(u8_t* data, int size){
 	int read_size = 0;
-	int remain_size = BUF_SIZE - uart_rxbuf_read_cursor;
 
 	unsigned int key;
 	while(1){
@@ -257,7 +254,6 @@ STATIC mp_obj_t machine_uart_deinit(mp_obj_t self_in){
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_uart_deinit_obj, machine_uart_deinit);
 
 STATIC mp_obj_t machine_uart_any(mp_obj_t self_in){
-	machine_uart_obj_t *self = MP_OBJ_TO_PTR(self_in);
 	size_t rxbufsize = 0;
 	
 	if(uart_rxbuf_write_cursor > uart_rxbuf_read_cursor){
