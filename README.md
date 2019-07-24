@@ -3,7 +3,7 @@
 Degu
 ========
 
-Degu is an open-source sensor device platform based on a low-power MCU and the Grove sensors connection interfaces. Degu runs on Zephyr os and can connect to the Degu gateway by Openthread stacks. Besides, Degu has the MicroPython interpreter that allows you to make your application.
+Degu is an open-source sensor device platform based on a low-power MCU and the Grove sensors connection interfaces. Degu runs on Zephyr OS and can connect to the Degu gateway by Openthread stacks. Besides, Degu has the MicroPython interpreter that allows you to make your application.
 
 Building
 --------
