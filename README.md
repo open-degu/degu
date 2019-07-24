@@ -3,25 +3,24 @@
 Degu
 ========
 
-Degu is an open-source sensor device platform based on a low-power MCU and the Grove sensors connection interfaces. Degu can connect gateway by Openthread stacks and it on Zephyr OS. For programing user specific behaviour, it impremented micropython intepritor for execute user application.
+Degu is an open-source sensor device platform based on a low-power MCU and the Grove sensors connection interfaces. Degu runs on Zephyr os and can connect to the Degu gateway by Openthread stacks. Besides, Degu has the MicroPython interpreter that allows you to make your application.
 
 Building
 --------
 
-To prepare for building, install Zephyr SDK and setting up build environment follow
-instrction of Zephyr Project Getting Started.
+Before building the Degu firmware, install Zephyr SDK and set up the building environment according to the instruction on Zephyr Project Getting Started. 
 
 https://docs.zephyrproject.org/latest/getting_started/installation_linux.html
 
-To build Degu firmware, run:
+To build the Degu firmware, run the following command:
 
     ./build.sh
 
-After, you can get Degu firmware image as degu.bin .
+Then, you will get the image of Degu firmware as degu.bin.
 
-Information
+See also
 --------
 
-* Information about Degu, visit degu web site(https://open-degu.com/)
+* For more information, please visit [the Degu website](https://open-degu.com/).
 
-* Technical resources for Degu on github project repositorys(https://github.com/open-degu)
+* For technical resources, please visit [the Degu repositories on GitHub](https://github.com/open-degu/).
