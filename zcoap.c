@@ -113,6 +113,76 @@ end:
 	return NULL;
 }
 
+u8_t *zcoap_request_put(int sock, u8_t *path, u8_t *payload)
+{
+	int r;
+	int rcvd;
+	struct coap_packet request;
+	struct coap_packet reply;
+	static u8_t str_code[5];
+	u8_t *data;
+	u8_t code;
+
+	data = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
+	if (!data) {
+		printf("can't malloc\n");
+		return NULL;
+	}
+
+	r = coap_packet_init(&request, data, MAX_COAP_MSG_LEN,
+			     1, COAP_TYPE_CON, 8, coap_next_token(),
+			     COAP_METHOD_PUT, coap_next_id());
+	if (r < 0) {
+		printf("Unable to init CoAP packet\n");
+		goto end;
+	}
+
+	r = coap_packet_append_option(&request, COAP_OPTION_URI_PATH, path, strlen(path));
+	if (r < 0) {
+		printf("Unable to add option to request\n");
+		goto end;
+	}
+
+	r = coap_packet_append_payload_marker(&request);
+	if (r < 0) {
+		printf("Unable to append payload maker\n");
+		goto end;
+	}
+	r = coap_packet_append_payload(&request, payload, strlen(payload));
+	if (r < 0) {
+		printf("Unable to append payload\n");
+		goto end;
+	}
+
+	r = zsock_send(sock, request.data, request.offset, 0);
+	if (r < 0) {
+		printf("Unable to send packet\n");
+		goto end;
+	}
+
+	rcvd = zsock_recv(sock, data, MAX_COAP_MSG_LEN, ZSOCK_MSG_DONTWAIT);
+	if (rcvd <= 0) {
+		printf("Unable to receive packet\n");
+		goto end;
+	}
+
+	r = coap_packet_parse(&reply, data, rcvd, NULL, 0);
+	if (r < 0) {
+		printf("Unable to parse recieved packet\n");
+		goto end;
+	}
+
+	code = coap_header_get_code(&reply);
+	sprintf(str_code, "%d.%02d", code/32, code%32);
+
+	k_free(data);
+	return str_code;
+
+end:
+	k_free(data);
+	return NULL;
+}
+
 u8_t *zcoap_request_get(int sock, u8_t *path, u16_t *payload_len)
 {
 	int r;

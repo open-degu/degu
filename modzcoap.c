@@ -69,6 +69,19 @@ STATIC mp_obj_t coap_request_post(mp_obj_t self_in, mp_obj_t path, mp_obj_t payl
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(coap_request_post_obj, coap_request_post);
 
+STATIC mp_obj_t coap_request_put(mp_obj_t self_in, mp_obj_t path, mp_obj_t payload) {
+	mp_obj_coap_t *client = self_in;
+	u8_t *str_code = zcoap_request_put(client->sock,
+					(u8_t *)mp_obj_str_get_str(path),
+					(u8_t *)mp_obj_str_get_str(payload));
+
+	if (str_code != NULL)
+		return mp_obj_new_str(str_code, strlen(str_code));
+	else
+		return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(coap_request_put_obj, coap_request_put);
+
 STATIC mp_obj_t coap_request_get(mp_obj_t self_in, mp_obj_t path) {
 	mp_obj_coap_t *client = self_in;
 	vstr_t vstr;
@@ -119,6 +132,7 @@ STATIC const mp_rom_map_elem_t coap_locals_dict_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&coap_close_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&coap_close_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_request_post), MP_ROM_PTR(&coap_request_post_obj) },
+	{ MP_ROM_QSTR(MP_QSTR_request_put), MP_ROM_PTR(&coap_request_put_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_request_get), MP_ROM_PTR(&coap_request_get_obj) },
 };
 

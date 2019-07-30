@@ -22,4 +22,5 @@
  * THE SOFTWARE.
  */
 u8_t *zcoap_request_post(int sock, u8_t *path, u8_t *payload);
+u8_t *zcoap_request_put(int sock, u8_t *path, u8_t *payload);
 u8_t *zcoap_request_get(int sock, u8_t *path, u16_t *payload_len);
