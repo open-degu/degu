@@ -37,27 +37,21 @@
 #include <net/udp.h>
 #include <net/coap.h>
 
-#define MAX_COAP_MSG_LEN 1152
-#define COAP_TYPE_CON 0 //Confirmable
-#define COAP_TYPE_NCON 1 //non-Confirmable
-#define COAP_TYPE_ACK 2 //Acknowledgement
-#define COAP_TYPE_RST 3 //Reset
+#include "zcoap.h"
 
-static u8_t *zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload_send, u16_t *payload_len)
+static u8_t zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t *payload_len)
 {
 	int r;
 	int rcvd;
 	struct coap_packet request;
 	struct coap_packet reply;
-	static u8_t str_code[5];
-	const u8_t *payload_recv;
 	u8_t *data;
 	u8_t code;
 
 	data = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
 	if (!data) {
 		printf("can't malloc\n");
-		return NULL;
+		return 0;
 	}
 
 	r = coap_packet_init(&request, data, MAX_COAP_MSG_LEN,
@@ -74,13 +68,13 @@ static u8_t *zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload_send
 		goto end;
 	}
 
-	if (method != COAP_METHOD_GET) {
+	if (method == COAP_METHOD_POST || method == COAP_METHOD_PUT) {
 		r = coap_packet_append_payload_marker(&request);
 		if (r < 0) {
 			printf("Unable to append payload maker\n");
 			goto end;
 		}
-		r = coap_packet_append_payload(&request, payload_send, strlen(payload_send));
+		r = coap_packet_append_payload(&request, payload, strlen(payload));
 		if (r < 0) {
 			printf("Unable to append payload\n");
 			goto end;
@@ -106,33 +100,28 @@ static u8_t *zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload_send
 	}
 
 	if (method == COAP_METHOD_GET) {
-		payload_recv = coap_packet_get_payload(&reply, payload_len);
-		k_free(data);
-		return (u8_t *)payload_recv;
+		strcpy(payload, coap_packet_get_payload(&reply, payload_len));
 	}
-	else {
-		code = coap_header_get_code(&reply);
-		sprintf(str_code, "%d.%02d", code/32, code%32);
-		k_free(data);
-		return str_code;
-	}
+	code = coap_header_get_code(&reply);
+	k_free(data);
+	return code;
 
 end:
 	k_free(data);
-	return NULL;
+	return 0;
 }
 
-u8_t *zcoap_request_post(int sock, u8_t *path, u8_t *payload)
+u8_t zcoap_request_post(int sock, u8_t *path, u8_t *payload)
 {
 	return zcoap_request(sock, path, COAP_METHOD_POST, payload, NULL);
 }
 
-u8_t *zcoap_request_put(int sock, u8_t *path, u8_t *payload)
+u8_t zcoap_request_put(int sock, u8_t *path, u8_t *payload)
 {
 	return zcoap_request(sock, path, COAP_METHOD_PUT, payload, NULL);
 }
 
-u8_t *zcoap_request_get(int sock, u8_t *path, u16_t *payload_len)
+u8_t zcoap_request_get(int sock, u8_t *path, u8_t *payload, u16_t *payload_len)
 {
-	return zcoap_request(sock, path, COAP_METHOD_GET, NULL, payload_len);
+	return zcoap_request(sock, path, COAP_METHOD_GET, payload, payload_len);
 }
