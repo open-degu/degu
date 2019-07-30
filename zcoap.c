@@ -93,7 +93,7 @@ static u8_t *zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload_send
 		goto end;
 	}
 
-	rcvd = zsock_recv(sock, data, MAX_COAP_MSG_LEN, ZSOCK_MSG_DONTWAIT);
+	rcvd = zsock_recv(sock, data, MAX_COAP_MSG_LEN, 0);
 	if (rcvd <= 0) {
 		printf("Unable to receive response\n");
 		goto end;
