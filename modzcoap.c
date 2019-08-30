@@ -94,6 +94,7 @@ STATIC mp_obj_t coap_request_get(mp_obj_t self_in, mp_obj_t path) {
 	mp_obj_coap_t *client = self_in;
 	vstr_t vstr;
 	u16_t payload_len;
+	bool last_block;
 	u8_t *payload = (u8_t *)m_malloc(MAX_COAP_MSG_LEN);
 
 	if (!payload) {
@@ -101,7 +102,7 @@ STATIC mp_obj_t coap_request_get(mp_obj_t self_in, mp_obj_t path) {
 		return mp_const_none;
 	}
 
-	zcoap_request_get(client->sock, (u8_t *)mp_obj_str_get_str(path), payload, &payload_len);
+	zcoap_request_get(client->sock, (u8_t *)mp_obj_str_get_str(path), payload, &payload_len, &last_block);
 
 	if (payload != NULL) {
 		vstr_init_len(&vstr, payload_len);

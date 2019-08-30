@@ -23,6 +23,7 @@
  */
 
 #define MAX_COAP_MSG_LEN 1152
+#define BLOCK_WISE_TRANSFER_SIZE_GET 0x6e000
 #define COAP_TYPE_CON 0 //Confirmable
 #define COAP_TYPE_NCON 1 //non-Confirmable
 #define COAP_TYPE_ACK 2 //Acknowledgement
@@ -30,4 +31,4 @@
 
 u8_t zcoap_request_post(int sock, u8_t *path, u8_t *payload);
 u8_t zcoap_request_put(int sock, u8_t *path, u8_t *payload);
-u8_t zcoap_request_get(int sock, u8_t *path, u8_t *payload, u16_t *payload_len);
+u8_t zcoap_request_get(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
