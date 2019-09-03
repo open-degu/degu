@@ -22,6 +22,25 @@
  * THE SOFTWARE.
  */
 
-void get_eui64(char *eui64);
-char *get_gw_addr(int prefix);
-int check_update(void);
+#include "py/mpconfig.h"
+
+#include <zephyr.h>
+#include "py/runtime.h"
+#include "degu_utils.h"
+
+STATIC mp_obj_t degu_check_update(void) {
+    return mp_obj_new_int(check_update());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(degu_check_update_obj, degu_check_update);
+
+STATIC const mp_rom_map_elem_t mp_module_degu_globals_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_degu) },
+    { MP_ROM_QSTR(MP_QSTR_check_update), MP_ROM_PTR(&degu_check_update_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_module_degu_globals, mp_module_degu_globals_table);
+
+const mp_obj_module_t mp_module_degu = {
+    .base = { &mp_type_module },
+    .globals = (mp_obj_dict_t*)&mp_module_degu_globals,
+};

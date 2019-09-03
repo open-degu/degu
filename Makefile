@@ -38,6 +38,7 @@ INC += -I$(ZEPHYR_BASE)/net/ip/contiki/os
 
 SRC_C = main.c \
 	degu_utils.c \
+	md5.c \
 	zcoap.c \
 	help.c \
 	modusocket.c \
@@ -46,6 +47,7 @@ SRC_C = main.c \
 	modzsensor.c \
 	modmachine.c \
 	modzcoap.c \
+	moddegu.c \
 	machine_i2c.c \
 	machine_adc.c \
 	machine_pin.c \
