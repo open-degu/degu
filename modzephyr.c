@@ -56,12 +56,12 @@ STATIC mp_obj_t mod_suspend(mp_obj_t time_sec)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_suspend_obj, mod_suspend);
 
 
-STATIC mp_obj_t mod_powerdown(void)
+STATIC mp_obj_t mod_deep_sleep(void)
 {
 	sys_set_power_state(SYS_POWER_STATE_DEEP_SLEEP);
 	return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_powerdown_obj, mod_powerdown);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_deep_sleep_obj, mod_deep_sleep);
 
 STATIC mp_obj_t mod_current_tid(void) {
     return MP_OBJ_NEW_SMALL_INT(k_current_get());
@@ -90,7 +90,7 @@ STATIC const mp_rom_map_elem_t mp_module_time_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_zephyr) },
     { MP_ROM_QSTR(MP_QSTR_is_preempt_thread), MP_ROM_PTR(&mod_is_preempt_thread_obj) },
     { MP_ROM_QSTR(MP_QSTR_suspend), MP_ROM_PTR(&mod_suspend_obj) },
-    { MP_ROM_QSTR(MP_QSTR_powerdown), MP_ROM_PTR(&mod_powerdown_obj) },
+    { MP_ROM_QSTR(MP_QSTR_deep_sleep), MP_ROM_PTR(&mod_deep_sleep_obj) },
     { MP_ROM_QSTR(MP_QSTR_current_tid), MP_ROM_PTR(&mod_current_tid_obj) },
     { MP_ROM_QSTR(MP_QSTR_stacks_analyze), MP_ROM_PTR(&mod_stacks_analyze_obj) },
 
