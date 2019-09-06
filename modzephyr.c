@@ -27,8 +27,6 @@
 #include "py/mpconfig.h"
 #if MICROPY_PY_ZEPHYR
 
-#include <power.h>
-#include <kernel.h>
 #include <zephyr.h>
 #include <misc/stack.h>
 
@@ -43,25 +41,6 @@ STATIC mp_obj_t mod_is_preempt_thread(void) {
     return mp_obj_new_bool(k_is_preempt_thread());
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_is_preempt_thread_obj, mod_is_preempt_thread);
-
-STATIC mp_obj_t mod_suspend(mp_obj_t time_sec)
-{
-	int time_to_wake = mp_obj_get_int(time_sec);
-	sys_pm_ctrl_enable_state(SYS_POWER_STATE_CPU_LPS_1);
-	sys_pm_ctrl_enable_state(SYS_POWER_STATE_CPU_LPS_2);
-	sys_set_power_state(SYS_POWER_STATE_CPU_LPS_2);
-	k_sleep(K_SECONDS(time_to_wake));
-	return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_suspend_obj, mod_suspend);
-
-
-STATIC mp_obj_t mod_deep_sleep(void)
-{
-	sys_set_power_state(SYS_POWER_STATE_DEEP_SLEEP);
-	return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_deep_sleep_obj, mod_deep_sleep);
 
 STATIC mp_obj_t mod_current_tid(void) {
     return MP_OBJ_NEW_SMALL_INT(k_current_get());
@@ -89,8 +68,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_shell_net_iface_obj, mod_shell_net_iface);
 STATIC const mp_rom_map_elem_t mp_module_time_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_zephyr) },
     { MP_ROM_QSTR(MP_QSTR_is_preempt_thread), MP_ROM_PTR(&mod_is_preempt_thread_obj) },
-    { MP_ROM_QSTR(MP_QSTR_suspend), MP_ROM_PTR(&mod_suspend_obj) },
-    { MP_ROM_QSTR(MP_QSTR_deep_sleep), MP_ROM_PTR(&mod_deep_sleep_obj) },
     { MP_ROM_QSTR(MP_QSTR_current_tid), MP_ROM_PTR(&mod_current_tid_obj) },
     { MP_ROM_QSTR(MP_QSTR_stacks_analyze), MP_ROM_PTR(&mod_stacks_analyze_obj) },
 
