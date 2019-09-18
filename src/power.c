@@ -18,6 +18,7 @@ void device_power(bool enable)
 	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
 
 	if (enable) {
+		sys_pm_resume_devices();
 		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 26, 0);
 		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
@@ -34,6 +35,7 @@ void device_power(bool enable)
 		gpio_pin_write(gpio1, 2, 0);
 		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio1, 6, 0);
+		sys_pm_suspend_devices();
 	}
 }
 
