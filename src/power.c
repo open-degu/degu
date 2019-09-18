@@ -18,17 +18,17 @@ void device_power(bool enable)
 	if (enable) {
 		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 26, 0);
-		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
-		gpio_pin_write(gpio1, 2, 0);
-		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
-		gpio_pin_write(gpio1, 6, 0);
-	} else {
-		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
-		gpio_pin_write(gpio0, 26, 1);
 		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio1, 2, 1);
 		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio1, 6, 1);
+	} else {
+		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
+		gpio_pin_write(gpio0, 26, 1);
+		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio1, 2, 0);
+		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio1, 6, 0);
 	}
 }
 
