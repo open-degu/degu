@@ -111,8 +111,12 @@ no_script:
 }
 
 void main(void) {
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_CPU_LPS);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_CPU_LPS_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_CPU_LPS_2);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_2);
 	mp_running = run_user_script("/NAND:/main.py");
 }
 
