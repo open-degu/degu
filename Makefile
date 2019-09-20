@@ -64,7 +64,7 @@ SRC_QSTR += $(SRC_C)
 OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 
 CFLAGS = $(Z_CFLAGS) \
-	 -std=gnu99 -fomit-frame-pointer -DNDEBUG -DMICROPY_HEAP_SIZE=$(MICROPY_HEAP_SIZE) $(CFLAGS_EXTRA) $(INC)
+	 -std=gnu99 -D_ISOC99_SOURCE -fomit-frame-pointer -DNDEBUG -DMICROPY_HEAP_SIZE=$(MICROPY_HEAP_SIZE) $(CFLAGS_EXTRA) $(INC)
 
 include $(TOP)/py/mkrules.mk
 
@@ -80,7 +80,7 @@ $(GENERIC_TARGETS): $(LIBMICROPYTHON)
 $(CLEAN_TARGETS):  clean
 
 $(GENERIC_TARGETS) $(KCONFIG_TARGETS) $(CLEAN_TARGETS):
-	$(MAKE) -C outdir/$(BOARD) $@
+	$(MAKE) -j -C outdir/$(BOARD) $@
 
 $(LIBMICROPYTHON): | $(Z_EXPORTS)
 build/genhdr/qstr.i.last: | $(Z_EXPORTS)
