@@ -33,7 +33,7 @@ void get_eui64(char *eui64)
 	char byte;
 	int i;
 
-	iface = net_if_get_by_index(0);
+	iface = net_if_get_by_index(1);
 
 	for (i = 0; i < 8; i++) {
 		byte = (char)net_if_get_link_addr(iface)->addr[i];
@@ -50,7 +50,7 @@ char *get_gw_addr(unsigned int prefix)
 	struct in6_addr gw_in6_addr;
 	int i, j;
 
-	iface = net_if_get_by_index(0);
+	iface = net_if_get_by_index(1);
 	ipv6 = iface->config.ip.ipv6;
 
 	for (i = 0; ipv6 && i < NET_IF_MAX_IPV6_ADDR; i++) {

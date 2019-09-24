@@ -27,15 +27,15 @@ typedef struct _mp_obj_coap_t {
 
 STATIC const mp_obj_type_t coap_type;
 
-STATIC void parse_inet_addr(mp_obj_coap_t *coap, mp_obj_t addr_in, struct sockaddr *sockaddr) {
+STATIC void parse_inet_addr(mp_obj_coap_t *coap, mp_obj_t addr_in6, struct sockaddr *sockaddr) {
     // We employ the fact that port and address offsets are the same for IPv4 & IPv6
-    struct sockaddr_in *sockaddr_in = (struct sockaddr_in*)sockaddr;
+    struct sockaddr_in6 *sockaddr_in6 = (struct sockaddr_in6*)sockaddr;
 
     mp_obj_t *addr_items;
-    mp_obj_get_array_fixed_n(addr_in, 2, &addr_items);
-    sockaddr_in->sin_family = net_context_get_family((void*)coap->sock);
-    RAISE_ERRNO(net_addr_pton(sockaddr_in->sin_family, mp_obj_str_get_str(addr_items[0]), &sockaddr_in->sin_addr));
-    sockaddr_in->sin_port = htons(mp_obj_get_int(addr_items[1]));
+    mp_obj_get_array_fixed_n(addr_in6, 2, &addr_items);
+    sockaddr_in6->sin6_family = AF_INET6;
+    RAISE_ERRNO(net_addr_pton(AF_INET6, mp_obj_str_get_str(addr_items[0]), &sockaddr_in6->sin6_addr));
+    sockaddr_in6->sin6_port = htons(mp_obj_get_int(addr_items[1]));
 }
 
 STATIC mp_obj_t coap_client_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
@@ -46,11 +46,11 @@ STATIC mp_obj_t coap_client_make_new(const mp_obj_type_t *type, size_t n_args, s
 	mp_obj_coap_t *client = m_new_obj_with_finaliser(mp_obj_coap_t);
 	client->base.type = (mp_obj_t)&coap_type;
 
-	client->sock = zsock_socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	client->sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	RAISE_SYSCALL_ERRNO(client->sock);
 
 	parse_inet_addr(client, args[0], &sockaddr);
-	ret = zsock_connect(client->sock, &sockaddr, sizeof(sockaddr));
+	ret = connect(client->sock, &sockaddr, sizeof(sockaddr));
 	RAISE_SYSCALL_ERRNO(ret);
 
 	return MP_OBJ_FROM_PTR(client);
@@ -119,7 +119,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(coap_request_get_obj, coap_request_get);
 
 STATIC mp_obj_t coap_close(mp_obj_t self_in) {
 	mp_obj_coap_t *self = self_in;
-	zsock_close(self->sock);
+	close(self->sock);
 	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(coap_close_obj, coap_close);
