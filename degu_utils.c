@@ -23,6 +23,14 @@
  */
 #include <net/net_ip.h>
 #include <net/net_if.h>
+#include <net/socket.h>
+#include <net/udp.h>
+#include <net/coap.h>
+#include <gpio.h>
+#include <stdio.h>
+#include <shell/shell.h>
+#include "zcoap.h"
+
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
 extern char *net_sprint_addr(sa_family_t af, const void *addr);
 
@@ -74,3 +82,104 @@ char *get_gw_addr(unsigned int prefix)
 
 	return NULL;
 }
+
+int degu_coap_request(u8_t *path, u8_t method, u8_t *payload)
+{
+	int sock;
+	struct sockaddr_in6 sockaddr;
+	u16_t payload_len;
+	bool last_block = false;
+	char gw_addr[NET_IPV6_ADDR_LEN];
+	char eui64[17];
+	char coap_path[40];
+	int ret;
+	int code = -1;
+
+	while (!net_if_is_up(net_if_get_by_index(1)));
+
+	sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock == -1) {
+		goto err;
+	}
+
+	sockaddr.sin6_family = AF_INET6;
+
+	strcpy(gw_addr, get_gw_addr(64));
+	ret = zsock_inet_pton(AF_INET6, gw_addr, &sockaddr.sin6_addr);
+	if (ret <= 0) {
+		goto err;
+	}
+
+	sockaddr.sin6_port = htons(5683);
+	ret = zsock_connect(sock, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+	if (ret < 0) {
+		goto err;
+	}
+
+	get_eui64(eui64);
+	eui64[16] = '\0';
+
+	snprintf(coap_path, sizeof(coap_path), "%s/%s", path, eui64);
+
+	switch (method) {
+	case COAP_METHOD_POST:
+		code = zcoap_request_post(sock, coap_path, payload);
+		break;
+	case COAP_METHOD_PUT:
+		code = zcoap_request_put(sock, coap_path, payload);
+		break;
+	case COAP_METHOD_GET:
+		while (!last_block) {
+			code = zcoap_request_get(sock, coap_path, payload, &payload_len, &last_block);
+			switch (code) {
+			case COAP_RESPONSE_CODE_CONTENT:
+				payload += payload_len;
+				break;
+			case COAP_RESPONSE_CODE_VALID:
+				break;
+			default:
+				code = -1;
+				goto err;
+			}
+		}
+	}
+
+err:
+	close(sock);
+
+	return code;
+}
+
+void openthread_join_success_handler(struct k_work *work)
+{
+	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
+	char *key;
+	char *cert;
+	int ret;
+
+	key = k_malloc(2048);
+	cert = k_malloc(2048);
+
+	ret = degu_coap_request("x509/key", COAP_METHOD_GET, key);
+	printk("key:%d\n", ret);
+	/* Write the key to A71CH in here */
+
+	ret = degu_coap_request("x509/cert", COAP_METHOD_GET, cert);
+	printk("cert:%d\n", ret);
+	/* Write the cert to A71CH in here */
+
+	k_free(key);
+	k_free(cert);
+
+	gpio_pin_configure(gpio1, 7, GPIO_DIR_OUT);
+	gpio_pin_write(gpio1, 7, 0);
+}
+
+void cmd_getkey(const struct shell *shell, size_t argc, char **argv)
+{
+	/* Only for debugging */
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+	openthread_join_success_handler(NULL);
+}
+SHELL_CMD_REGISTER(getkey, NULL, "Get key and cer", cmd_getkey);
