@@ -10,25 +10,32 @@
 #include <clock_control.h>
 #include <gpio.h>
 
+#include <nrfx/hal/nrf_radio.h>
+
 void device_power(bool enable)
 {
 	struct device *gpio0 = device_get_binding(DT_GPIO_P0_DEV_NAME);
 	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
 
 	if (enable) {
+		sys_pm_resume_devices();
 		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 26, 0);
-		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
-		gpio_pin_write(gpio1, 2, 0);
-		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
-		gpio_pin_write(gpio1, 6, 0);
-	} else {
-		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
-		gpio_pin_write(gpio0, 26, 1);
 		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio1, 2, 1);
 		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio1, 6, 1);
+		nrf_radio_task_trigger(NRF_RADIO_TASK_TXEN);
+	} else {
+		NRF_RADIO->SHORTS = 0;
+		nrf_radio_task_trigger(NRF_RADIO_TASK_DISABLE);
+		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
+		gpio_pin_write(gpio0, 26, 1);
+		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio1, 2, 0);
+		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio1, 6, 0);
+		sys_pm_suspend_devices();
 	}
 }
 

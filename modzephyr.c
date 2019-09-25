@@ -51,6 +51,8 @@ STATIC mp_obj_t mod_suspend(mp_obj_t time_sec)
 	sys_pm_ctrl_enable_state(SYS_POWER_STATE_CPU_LPS_2);
 	sys_set_power_state(SYS_POWER_STATE_CPU_LPS_2);
 	k_sleep(K_SECONDS(time_to_wake));
+    sys_pm_ctrl_disable_state(SYS_POWER_STATE_CPU_LPS_1);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_CPU_LPS_2);
 	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_suspend_obj, mod_suspend);
@@ -58,7 +60,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_suspend_obj, mod_suspend);
 
 STATIC mp_obj_t mod_powerdown(void)
 {
+    sys_pm_ctrl_enable_state(SYS_POWER_STATE_DEEP_SLEEP);
 	sys_set_power_state(SYS_POWER_STATE_DEEP_SLEEP);
+    sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP);
 	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_powerdown_obj, mod_powerdown);
