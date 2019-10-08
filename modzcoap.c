@@ -46,7 +46,7 @@ STATIC mp_obj_t coap_client_make_new(const mp_obj_type_t *type, size_t n_args, s
 	mp_obj_coap_t *client = m_new_obj_with_finaliser(mp_obj_coap_t);
 	client->base.type = (mp_obj_t)&coap_type;
 
-	client->sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	client->sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_DTLS_1_2);
 	RAISE_SYSCALL_ERRNO(client->sock);
 
 	parse_inet_addr(client, args[0], &sockaddr);
