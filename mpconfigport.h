@@ -115,7 +115,7 @@ extern const struct _mp_obj_module_t mp_module_time;
 extern const struct _mp_obj_module_t mp_module_usocket;
 extern const struct _mp_obj_module_t mp_module_zephyr;
 extern const struct _mp_obj_module_t mp_module_zsensor;
-extern const struct _mp_obj_module_t mp_module_zcoap;
+extern const struct _mp_obj_module_t mp_module_degu;
 
 #if MICROPY_PY_USOCKET
 #define MICROPY_PY_USOCKET_DEF { MP_ROM_QSTR(MP_QSTR_usocket), MP_ROM_PTR(&mp_module_usocket) },
@@ -149,7 +149,7 @@ extern const struct _mp_obj_module_t mp_module_zcoap;
     MICROPY_PY_UTIME_DEF \
     MICROPY_PY_ZEPHYR_DEF \
     MICROPY_PY_ZSENSOR_DEF \
-    { MP_ROM_QSTR(MP_QSTR_zcoap), MP_ROM_PTR(&mp_module_zcoap) }, \
+    { MP_ROM_QSTR(MP_QSTR_degu), MP_ROM_PTR(&mp_module_degu) }, \
 
 #define MICROPY_PORT_BUILTIN_MODULE_WEAK_LINKS			\
     { MP_ROM_QSTR(MP_QSTR_time), MP_ROM_PTR(&mp_module_time) }, \
