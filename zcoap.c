@@ -47,11 +47,13 @@ static u8_t zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_
 {
 	int r;
 	int rcvd;
+	fd_set fds;
 	struct coap_packet request;
 	struct coap_packet reply;
 	u8_t *data;
 	const u8_t *payload_buf;
 	u8_t code;
+	struct timeval tv;
 
 	if (blk_ctx.total_size == 0) {
 		coap_block_transfer_init(&blk_ctx, COAP_BLOCK_1024,
@@ -105,7 +107,18 @@ static u8_t zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_
 		goto end;
 	}
 
-	rcvd = recv(sock, data, MAX_COAP_MSG_LEN, 0);
+	FD_ZERO(&fds);
+	FD_SET(sock, &fds);
+	tv.tv_sec = 3;
+	tv.tv_usec = 0;
+
+	r = select(sock + 1, &fds, NULL, NULL, &tv);
+	if (!r) {
+		printf("Receiving response timeout\n");
+		goto end;
+	}
+
+	rcvd = recv(sock, data, MAX_COAP_MSG_LEN, MSG_DONTWAIT);
 	if (rcvd == 0) {
 		printf("Unable to receive response\n");
 		goto end;
