@@ -11,6 +11,12 @@
 
 #include "zcoap.h"
 #include "degu_utils.h"
+#include "degu_ota.h"
+
+STATIC mp_obj_t degu_check_update(void) {
+	return mp_obj_new_int(check_update());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(degu_check_update_obj, degu_check_update);
 
 STATIC mp_obj_t degu_update_shadow(mp_obj_t shadow) {
 	int ret = degu_coap_request("thing", COAP_METHOD_POST, (u8_t *)mp_obj_str_get_str(shadow), NULL);
@@ -45,6 +51,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(degu_get_shadow_obj, degu_get_shadow);
 
 STATIC const mp_rom_map_elem_t degu_globals_table[] = {
 	{MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_degu) },
+	{ MP_ROM_QSTR(MP_QSTR_check_update), MP_ROM_PTR(&degu_check_update_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_update_shadow), MP_ROM_PTR(&degu_update_shadow_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_get_shadow), MP_ROM_PTR(&degu_get_shadow_obj) },
 };

@@ -88,7 +88,7 @@ void degu_get_asset(void);
 void degu_send_asset(void);
 void degu_connect(void);
 
-int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *buf, u16_t size))
+int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *, u16_t))
 {
 	int sock;
 	struct sockaddr_in6 sockaddr;
@@ -147,23 +147,31 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 
 		/* Process by response code */
 		switch (code) {
+		case COAP_FAILED_TO_RECEIVE_RESPONSE:
 		case COAP_RESPONSE_CODE_VALID:
 			/* GW is in progress */
 			break;
 
 		case COAP_RESPONSE_CODE_CONTENT:
-			/* In progress of GET/PUT/POST */
+			/* In progress of GET */
 			if (callback != NULL) {
 				/* Process a block of payload*/
 				callback(payload, payload_len);
 			}
-		case COAP_RESPONSE_CODE_CONTINUE:
-			if (last_block) {
-				goto end;
-			}
 			else {
 				payload += 1024;
 			}
+			if (last_block) {
+				goto end;
+			}
+			break;
+
+		case COAP_RESPONSE_CODE_CONTINUE:
+			/* In progress of PUT/POST */
+			if (last_block) {
+				goto end;
+			}
+			payload += 1024;
 			break;
 
 		case COAP_RESPONSE_CODE_BAD_REQUEST:
@@ -179,7 +187,6 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 			/* Need to get the asset from GW again */
 			degu_get_asset();
 			break;
-
 		default:
 			/* Complete or failed the operation */
 			goto end;

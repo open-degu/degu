@@ -26,9 +26,11 @@
 #include <zephyr.h>
 #include <console.h>
 #include "zephyr_getchar.h"
+#include "../degu_ota.h"
 #include <shell/shell.h>
 #include <sys/util.h>
 #include <init.h>
+#include <misc/reboot.h>
 
 #include <fs.h>
 #include <ff.h>
@@ -68,11 +70,6 @@ int run_user_script(char *path) {
 	static char *file_data;
 	static size_t len;
 
-	err = mount_fat();
-	if(err) {
-		LOG_ERR("Failed to mount user region");
-		goto no_script;
-	}
 	err = fs_stat(path, &dirent);
 	if(err) {
 		LOG_ERR("Failed to stat file");
@@ -112,6 +109,22 @@ no_script:
 }
 
 void main(void) {
+	int err = 0;
+
+	err = mount_fat();
+	if (err) {
+		LOG_ERR("Failed to mount user region");
+	}
+
+	update_init();
+
+	if (check_update()) {
+		LOG_INF("Trying to update...");
+		if (!do_update()) {
+			sys_reboot(SYS_REBOOT_COLD);
+		}
+	}
+
 	mp_running = run_user_script("/NAND:/main.py");
 }
 

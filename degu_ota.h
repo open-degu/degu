@@ -22,6 +22,6 @@
  * THE SOFTWARE.
  */
 
-void get_eui64(char *eui64);
-char *get_gw_addr(int prefix);
-int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *, u16_t));
+int update_init(void);
+int check_update(void);
+int do_update(void);

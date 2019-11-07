@@ -30,8 +30,9 @@
 #define COAP_TYPE_NCON 1 //non-Confirmable
 #define COAP_TYPE_ACK 2 //Acknowledgement
 #define COAP_TYPE_RST 3 //Reset
+#define COAP_FAILED_TO_RECEIVE_RESPONSE -1
 
-u8_t zcoap_request_post(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
-u8_t zcoap_request_put(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
-u8_t zcoap_request_get(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
-u8_t zcoap_request_delete(int sock, u8_t *path);
+int zcoap_request_post(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
+int zcoap_request_put(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
+int zcoap_request_get(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
+int zcoap_request_delete(int sock, u8_t *path);

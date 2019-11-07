@@ -34,9 +34,12 @@ INC += -I$(BUILD)
 INC += -I$(ZEPHYR_BASE)/net/ip
 INC += -I$(ZEPHYR_BASE)/net/ip/contiki
 INC += -I$(ZEPHYR_BASE)/net/ip/contiki/os
+INC += -I$(PWD)/modules/crypto/mbedtls/include
+INC += -I$(PWD)/modules/fs/fatfs/include
 
 SRC_C = main.c \
 	degu_utils.c \
+	degu_ota.c \
 	zcoap.c \
 	help.c \
 	modusocket.c \
