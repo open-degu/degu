@@ -13,7 +13,7 @@
 #include "degu_utils.h"
 
 STATIC mp_obj_t degu_update_shadow(mp_obj_t shadow) {
-	int ret = degu_coap_request("thing", COAP_METHOD_POST, (u8_t *)mp_obj_str_get_str(shadow));
+	int ret = degu_coap_request("thing", COAP_METHOD_POST, (u8_t *)mp_obj_str_get_str(shadow), NULL);
 
 	return mp_obj_new_int(ret);
 }
@@ -28,7 +28,7 @@ STATIC mp_obj_t degu_get_shadow(void) {
 		return mp_const_none;
 	}
 
-	degu_coap_request("thing", COAP_METHOD_GET, payload);
+	degu_coap_request("thing", COAP_METHOD_GET, payload, NULL);
 
 	if (payload != NULL) {
 		vstr_init_len(&vstr, strlen(payload));

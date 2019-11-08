@@ -22,6 +22,8 @@
  * THE SOFTWARE.
  */
 
+#define COAP_PORT 5683
+#define COAPS_PORT 5684
 #define MAX_COAP_MSG_LEN 1152
 #define BLOCK_WISE_TRANSFER_SIZE_GET 0x6e000
 #define COAP_TYPE_CON 0 //Confirmable
@@ -29,6 +31,7 @@
 #define COAP_TYPE_ACK 2 //Acknowledgement
 #define COAP_TYPE_RST 3 //Reset
 
-u8_t zcoap_request_post(int sock, u8_t *path, u8_t *payload);
-u8_t zcoap_request_put(int sock, u8_t *path, u8_t *payload);
+u8_t zcoap_request_post(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
+u8_t zcoap_request_put(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
 u8_t zcoap_request_get(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
+u8_t zcoap_request_delete(int sock, u8_t *path);

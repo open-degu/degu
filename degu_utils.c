@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <shell/shell.h>
 #include "zcoap.h"
+#include "degu_test.h"
 
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
 extern char *net_sprint_addr(sa_family_t af, const void *addr);
@@ -83,7 +84,11 @@ char *get_gw_addr(unsigned int prefix)
 	return NULL;
 }
 
-int degu_coap_request(u8_t *path, u8_t method, u8_t *payload)
+void degu_get_asset(void);
+void degu_send_asset(void);
+void degu_connect(void);
+
+int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *buf, u16_t size))
 {
 	int sock;
 	struct sockaddr_in6 sockaddr;
@@ -93,13 +98,13 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload)
 	char eui64[17];
 	char coap_path[40];
 	int ret;
-	int code = -1;
+	int code = 0;
 
 	while (!net_if_is_up(net_if_get_by_index(1)));
 
-	sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_DTLS_1_2);
 	if (sock == -1) {
-		goto err;
+		goto end;
 	}
 
 	sockaddr.sin6_family = AF_INET6;
@@ -107,13 +112,13 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload)
 	strcpy(gw_addr, get_gw_addr(64));
 	ret = zsock_inet_pton(AF_INET6, gw_addr, &sockaddr.sin6_addr);
 	if (ret <= 0) {
-		goto err;
+		goto end;
 	}
 
-	sockaddr.sin6_port = htons(5683);
+	sockaddr.sin6_port = htons(COAPS_PORT);
 	ret = zsock_connect(sock, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
 	if (ret < 0) {
-		goto err;
+		goto end;
 	}
 
 	get_eui64(eui64);
@@ -121,65 +126,124 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload)
 
 	snprintf(coap_path, sizeof(coap_path), "%s/%s", path, eui64);
 
-	switch (method) {
-	case COAP_METHOD_POST:
-		code = zcoap_request_post(sock, coap_path, payload);
-		break;
-	case COAP_METHOD_PUT:
-		code = zcoap_request_put(sock, coap_path, payload);
-		break;
-	case COAP_METHOD_GET:
-		while (!last_block) {
+	while (1) {
+		switch (method) {
+		case COAP_METHOD_POST:
+			payload_len = strlen(payload);
+			code = zcoap_request_post(sock, coap_path, payload, &payload_len, &last_block);
+			break;
+		case COAP_METHOD_PUT:
+			payload_len = strlen(payload);
+			code = zcoap_request_put(sock, coap_path, payload, &payload_len, &last_block);
+			break;
+		case COAP_METHOD_GET:
 			code = zcoap_request_get(sock, coap_path, payload, &payload_len, &last_block);
-			switch (code) {
-			case COAP_RESPONSE_CODE_CONTENT:
-				payload += payload_len;
-				break;
-			case COAP_RESPONSE_CODE_VALID:
-				break;
-			default:
-				code = -1;
-				goto err;
+			break;
+		case COAP_METHOD_DELETE:
+			code = zcoap_request_delete(sock, coap_path);
+		default:
+			goto end;
+		}
+
+		/* Process by response code */
+		switch (code) {
+		case COAP_RESPONSE_CODE_VALID:
+			/* GW is in progress */
+			break;
+
+		case COAP_RESPONSE_CODE_CONTENT:
+			/* In progress of GET/PUT/POST */
+			if (callback != NULL) {
+				/* Process a block of payload*/
+				callback(payload, payload_len);
 			}
+		case COAP_RESPONSE_CODE_CONTINUE:
+			if (last_block) {
+				goto end;
+			}
+			else {
+				payload += 1024;
+			}
+			break;
+
+		case COAP_RESPONSE_CODE_BAD_REQUEST:
+		case COAP_RESPONSE_CODE_INTERNAL_ERROR:
+			/* Need to send the asset again */
+			degu_send_asset();
+		case COAP_RESPONSE_CODE_GATEWAY_TIMEOUT:
+			/* Need to make connection again */
+			degu_connect();
+			break;
+
+		case COAP_RESPONSE_CODE_NOT_FOUND:
+			/* Need to get the asset from GW again */
+			degu_get_asset();
+			break;
+
+		default:
+			/* Complete or failed the operation */
+			goto end;
 		}
 	}
 
-err:
+end:
 	close(sock);
 
 	return code;
 }
 
-void openthread_join_success_handler(struct k_work *work)
+void degu_get_asset(void)
 {
-	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
 	char *key;
 	char *cert;
-	int ret;
 
 	key = k_malloc(2048);
 	cert = k_malloc(2048);
 
-	ret = degu_coap_request("x509/key", COAP_METHOD_GET, key);
-	printk("key:%d\n", ret);
+	/* At first, we must erase A71CH in here*/
+
+	degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
 	/* Write the key to A71CH in here */
 
-	ret = degu_coap_request("x509/cert", COAP_METHOD_GET, cert);
-	printk("cert:%d\n", ret);
+	degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
 	/* Write the cert to A71CH in here */
 
 	k_free(key);
 	k_free(cert);
+}
+
+void degu_connect(void)
+{
+	degu_coap_request("con/connection", COAP_METHOD_PUT, "", NULL);
+}
+
+void degu_send_asset(void)
+{
+	char *key;
+	char *cert;
+	char timeout[4];
+
+	key = k_malloc(4096);
+	cert = k_malloc(4096);
+
+	strcpy(key, DEGU_TEST_KEY);
+	strcpy(cert, DEGU_TEST_CERT);
+	strcpy(timeout, DEGU_TEST_TIMEOUT_SEC);
+
+	degu_coap_request("con/key", COAP_METHOD_PUT, key, NULL);
+	degu_coap_request("con/cert", COAP_METHOD_PUT, cert, NULL);
+	degu_coap_request("con/timeout", COAP_METHOD_PUT, timeout, NULL);
+
+	k_free(key);
+	k_free(cert);
+}
+
+void openthread_join_success_handler(struct k_work *work)
+{
+	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
+
+	degu_get_asset();
 
 	gpio_pin_configure(gpio1, 7, GPIO_DIR_OUT);
 	gpio_pin_write(gpio1, 7, 0);
 }
-
-void cmd_getkey(const struct shell *shell, size_t argc, char **argv)
-{
-	/* Only for debugging */
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-	openthread_join_success_handler(NULL);
-}
-SHELL_CMD_REGISTER(getkey, NULL, "Get key and cer", cmd_getkey);
