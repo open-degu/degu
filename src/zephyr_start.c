@@ -27,6 +27,7 @@
 #include <console.h>
 #include "zephyr_getchar.h"
 #include <shell/shell.h>
+#include <sys/util.h>
 #include <init.h>
 
 #include <fs.h>
@@ -92,7 +93,7 @@ int run_user_script(char *path) {
 	int count = INT_MAX;
 	int read = 0;
 	while(1){
-		read = fs_read(&file, file_data + offset, min(count, len));
+		read = fs_read(&file, file_data + offset, MIN(count, len));
 		if (read <= 0) {
 			break;
 		}
