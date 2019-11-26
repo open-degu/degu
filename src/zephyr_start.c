@@ -25,6 +25,7 @@
  */
 #include <zephyr.h>
 #include <console.h>
+#include <power.h>
 #include "zephyr_getchar.h"
 #include "../degu_ota.h"
 #include <shell/shell.h>
@@ -110,6 +111,13 @@ no_script:
 
 void main(void) {
 	int err = 0;
+
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_1);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_2);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_3);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_2);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_3);
 
 	err = mount_fat();
 	if (err) {

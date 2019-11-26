@@ -40,6 +40,7 @@ INC += -I$(PWD)/modules/fs/fatfs/include
 SRC_C = main.c \
 	degu_utils.c \
 	degu_ota.c \
+	degu_pm.c \
 	zcoap.c \
 	help.c \
 	modusocket.c \
