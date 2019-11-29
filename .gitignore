@@ -15,3 +15,5 @@ GPATH
 GRTAGS
 GSYMS
 GTAGS
+
+*.pyc
