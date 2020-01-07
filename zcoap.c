@@ -77,6 +77,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 		LOG_ERR("can't malloc\n");
 		return 0;
 	}
+	memset(data, 0, MAX_COAP_MSG_LEN);
 
 	r = coap_packet_init(&request, data, MAX_COAP_MSG_LEN,
 			     1, COAP_TYPE_CON, sizeof(token), token,
