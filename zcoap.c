@@ -47,6 +47,8 @@ static struct coap_block_context blk_ctx;
 
 static u8_t token[8];
 
+static const u16_t COAP_BLOCK_THRESHOLD = 1024;
+
 static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t *payload_len, bool *last_block)
 {
 	int r;
@@ -66,8 +68,13 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 			coap_block_transfer_init(&blk_ctx, COAP_BLOCK_1024,
 						BLOCK_WISE_TRANSFER_SIZE_GET);
 		}
-		else if (method == COAP_METHOD_POST || method == COAP_METHOD_PUT) {
-			coap_block_transfer_init(&blk_ctx, COAP_BLOCK_1024, *payload_len);
+		else if ((method == COAP_METHOD_POST || method == COAP_METHOD_PUT) &&
+			  *payload_len > COAP_BLOCK_THRESHOLD) {
+			r = coap_block_transfer_init(&blk_ctx, COAP_BLOCK_1024, *payload_len);
+			if (r != 0) {
+				LOG_ERR("failed to coap_block_transfer_init(%d)\n", r);
+				return code;
+			}
 		}
 		memcpy(token, coap_next_token(), sizeof(token));
 	}
@@ -75,58 +82,67 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 	data = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
 	if (!data) {
 		LOG_ERR("can't malloc\n");
-		return 0;
+		memset(&blk_ctx, 0, sizeof(blk_ctx));
+		return code;
 	}
+	memset(data, 0, MAX_COAP_MSG_LEN);
 
 	r = coap_packet_init(&request, data, MAX_COAP_MSG_LEN,
 			     1, COAP_TYPE_CON, sizeof(token), token,
 			     method, coap_next_id());
 	if (r < 0) {
 		LOG_ERR("Unable to init CoAP packet\n");
-		goto end;
+		goto errorend;
 	}
 
 	r = coap_packet_append_option(&request, COAP_OPTION_URI_PATH, path, strlen(path));
 	if (r < 0) {
 		LOG_ERR("Unable to append URI to request\n");
-		goto end;
+		goto errorend;
 	}
 
 	if (method == COAP_METHOD_GET) {
 		r = coap_append_block2_option(&request, &blk_ctx);
 		if (r < 0) {
 			LOG_ERR("Unable to append block2 option to request\n");
-			goto end;
+			goto errorend;
 		}
 	}
 	else if (method == COAP_METHOD_POST || method == COAP_METHOD_PUT) {
-		r = coap_append_block1_option(&request, &blk_ctx);
-		if (r < 0) {
-			LOG_ERR("Unable to append block1 option to request\n");
-			goto end;
+		if (*payload_len > COAP_BLOCK_THRESHOLD || blk_ctx.total_size != 0) {
+			r = coap_append_block1_option(&request, &blk_ctx);
+			if (r < 0) {
+				LOG_ERR("Unable to append block1 option to request\n");
+				goto errorend;
+			}
 		}
 		r = coap_packet_append_payload_marker(&request);
 		if (r < 0) {
 			LOG_ERR("Unable to append payload maker\n");
-			goto end;
+			goto errorend;
 		}
 
-		if (blk_ctx.total_size > 1024) {
-			r = coap_packet_append_payload(&request, payload, 1024);
+		if (blk_ctx.total_size > COAP_BLOCK_THRESHOLD) {
+			if ((blk_ctx.total_size - blk_ctx.current) < COAP_BLOCK_THRESHOLD) {
+				r = coap_packet_append_payload(&request, payload,
+						blk_ctx.total_size - blk_ctx.current);
+			} else {
+				r = coap_packet_append_payload(&request, payload, COAP_BLOCK_THRESHOLD);
+			}
 		}
 		else {
-			r = coap_packet_append_payload(&request, payload, blk_ctx.total_size);
+			r = coap_packet_append_payload(&request, payload, *payload_len);
 		}
 		if (r < 0) {
 			LOG_ERR("Unable to append payload\n");
-			goto end;
+			goto errorend;
 		}
 	}
 
 	r = send(sock, request.data, request.offset, 0);
 	if (r < 0) {
 		LOG_ERR("Unable to send request\n");
-		goto end;
+		goto errorend;
 	}
 
 	FD_ZERO(&fds);
@@ -138,13 +154,13 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 	if (!r) {
 		LOG_ERR("Receiving response timeout\n");
 		code = COAP_FAILED_TO_RECEIVE_RESPONSE;
-		goto end;
+		goto errorend;
 	}
 
 	rcvd = recv(sock, data, MAX_COAP_MSG_LEN, MSG_DONTWAIT);
 	if (rcvd == 0) {
 		LOG_ERR("Unable to receive response\n");
-		goto end;
+		goto errorend;
 	}
 	if (rcvd < 0) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -155,13 +171,13 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 			r = -errno;
 		}
 
-		goto end;
+		goto errorend;
 	}
 
 	r = coap_packet_parse(&reply, data, rcvd, NULL, 0);
 	if (r < 0) {
 		LOG_ERR("Unable to parse recieved packet\n");
-		goto end;
+		goto errorend;
 	}
 
 	code = coap_header_get_code(&reply);
@@ -179,16 +195,27 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 		}
 	}
 	else if (method == COAP_METHOD_POST || method == COAP_METHOD_PUT) {
-		if (coap_next_block(&request, &blk_ctx) >= *payload_len) {
+		if (blk_ctx.total_size > COAP_BLOCK_THRESHOLD) {
+			r = coap_next_block(&request, &blk_ctx);
+			if (r >= *payload_len || r == 0) {
+				memset(&blk_ctx, 0, sizeof(blk_ctx));
+				*last_block = true;
+			}
+			else {
+				*last_block = false;
+			}
+		}
+		else {
 			memset(&blk_ctx, 0, sizeof(blk_ctx));
 			*last_block = true;
 		}
-		else {
-			*last_block = false;
-		}
 	}
 
-end:
+	k_free(data);
+	return code;
+
+errorend:
+	memset(&blk_ctx, 0, sizeof(blk_ctx));
 	k_free(data);
 	return code;
 }
