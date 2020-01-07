@@ -202,6 +202,7 @@ int update_init(void)
 		LOG_ERR("Cannot malloc for payload");
 		return 1;
 	}
+	memset(payload, 0, MAX_COAP_MSG_LEN);
 
 	update_flag_script_user = false;
 	update_flag_config_user = false;

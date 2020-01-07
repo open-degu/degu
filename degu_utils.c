@@ -129,11 +129,11 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 	while (1) {
 		switch (method) {
 		case COAP_METHOD_POST:
-			payload_len = strlen(payload);
+			payload_len = strlen((char*)payload);
 			code = zcoap_request_post(sock, coap_path, payload, &payload_len, &last_block);
 			break;
 		case COAP_METHOD_PUT:
-			payload_len = strlen(payload);
+			payload_len = strlen((char*)payload);
 			code = zcoap_request_put(sock, coap_path, payload, &payload_len, &last_block);
 			break;
 		case COAP_METHOD_GET:
@@ -207,6 +207,9 @@ void degu_get_asset(void)
 	key = k_malloc(2048);
 	cert = k_malloc(2048);
 
+	memset(key, 0, 2048);
+	memset(cert, 0, 2048);
+
 	/* At first, we must erase A71CH in here*/
 
 	degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
@@ -232,6 +235,9 @@ void degu_send_asset(void)
 
 	key = k_malloc(4096);
 	cert = k_malloc(4096);
+
+	memset(key, 0, 4096);
+	memset(cert, 0, 4096);
 
 	strcpy(key, DEGU_TEST_KEY);
 	strcpy(cert, DEGU_TEST_CERT);
