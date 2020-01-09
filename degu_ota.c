@@ -194,6 +194,7 @@ static int firmware_sum(char *md5)
 int update_init(void)
 {
 	char shadow_encoded[1024];
+	memset(shadow_encoded, 0, 1024);
 
 	flash_dev = device_get_binding(DT_FLASH_DEV_NAME);
 
@@ -282,6 +283,8 @@ int do_update(void)
 	char request_url[1024];
 	int err = 1;
 
+	memset(request_url, 0, 1024);
+
 	json_obj_encode_buf(desired_descr, ARRAY_SIZE(desired_descr),
 		&shadow_recv.state.desired, request_url, sizeof(request_url));
 
@@ -299,6 +302,7 @@ int do_update(void)
 
 		degu_coap_request("update/script_user", COAP_METHOD_PUT, "", NULL);
 		degu_coap_request("update/script_user", COAP_METHOD_POST, request_url, NULL);
+		memset(payload, 0, 1024);
 		degu_coap_request("update/script_user", COAP_METHOD_GET, payload, &write_file);
 
 		fs_close(&file);
@@ -318,6 +322,7 @@ int do_update(void)
 
 		degu_coap_request("update/config_user", COAP_METHOD_PUT, "", NULL);
 		degu_coap_request("update/config_user", COAP_METHOD_POST, request_url, NULL);
+		memset(payload, 0, 1024);
 		degu_coap_request("update/config_user", COAP_METHOD_GET, payload, &write_file);
 
 		fs_close(&file);
@@ -328,6 +333,7 @@ int do_update(void)
 
 		degu_coap_request("update/firmware_system", COAP_METHOD_PUT, "", NULL);
 		degu_coap_request("update/firmware_system", COAP_METHOD_POST, request_url, NULL);
+		memset(payload, 0, 1024);
 		degu_coap_request("update/firmware_system", COAP_METHOD_GET, payload, &write_firmware);
 		write_img_magic();
 	}
@@ -341,6 +347,7 @@ int check_update(void)
 	int ret = 0;
 
 	degu_coap_request("update/status", COAP_METHOD_PUT, "", NULL);
+	memset(payload, 0, 1024);
 	degu_coap_request("update/status", COAP_METHOD_GET, payload, NULL);
 
 	if (payload != NULL) {
