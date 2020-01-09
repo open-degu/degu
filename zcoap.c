@@ -73,7 +73,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 			r = coap_block_transfer_init(&blk_ctx, COAP_BLOCK_1024, *payload_len);
 			if (r != 0) {
 				LOG_ERR("failed to coap_block_transfer_init(%d)\n", r);
-				return 0;
+				return code;
 			}
 		}
 		memcpy(token, coap_next_token(), sizeof(token));
@@ -83,7 +83,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 	if (!data) {
 		LOG_ERR("can't malloc\n");
 		memset(&blk_ctx, 0, sizeof(blk_ctx));
-		return 0;
+		return code;
 	}
 	memset(data, 0, MAX_COAP_MSG_LEN);
 
@@ -109,7 +109,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 		}
 	}
 	else if (method == COAP_METHOD_POST || method == COAP_METHOD_PUT) {
-		if (*payload_len > COAP_BLOCK_THRESHOLD) {
+		if (*payload_len > COAP_BLOCK_THRESHOLD || blk_ctx.total_size != 0) {
 			r = coap_append_block1_option(&request, &blk_ctx);
 			if (r < 0) {
 				LOG_ERR("Unable to append block1 option to request\n");
