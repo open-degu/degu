@@ -39,6 +39,7 @@ STATIC mp_obj_t degu_get_shadow(void) {
 		printf("can't malloc\n");
 		return mp_const_none;
 	}
+	memset(payload, 0, MAX_COAP_MSG_LEN);
 
 	degu_coap_request("thing", COAP_METHOD_GET, payload, NULL);
 
