@@ -22,6 +22,9 @@
  * THE SOFTWARE.
  */
 
+#define DEGU_OTA_OK 1
+#define DEGU_OTA_ERR 0
+
 int update_init(void);
 int check_update(void);
 int do_update(void);
