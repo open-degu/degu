@@ -127,7 +127,7 @@ void main(void) {
 	if(update_init() == DEGU_OTA_OK){
 		if (check_update() == DEGU_OTA_OK) {
 			LOG_INF("Trying to update...");
-			if (do_update()) {
+			if (do_update() == DEGU_OTA_OK) {
 				sys_reboot(SYS_REBOOT_COLD);
 			}
 		}
