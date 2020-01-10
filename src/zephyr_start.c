@@ -124,12 +124,12 @@ void main(void) {
 		LOG_ERR("Failed to mount user region");
 	}
 
-	update_init();
-
-	if (check_update()) {
-		LOG_INF("Trying to update...");
-		if (!do_update()) {
-			sys_reboot(SYS_REBOOT_COLD);
+	if(update_init()){
+		if (check_update()) {
+			LOG_INF("Trying to update...");
+			if (do_update()) {
+				sys_reboot(SYS_REBOOT_COLD);
+			}
 		}
 	}
 

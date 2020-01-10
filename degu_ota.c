@@ -33,8 +33,9 @@
 #include <sys/util.h>
 #include <logging/log.h>
 #include "mbedtls/md5.h"
-#include "../degu_utils.h"
-#include "../zcoap.h"
+#include "degu_utils.h"
+#include "zcoap.h"
+#include "degu_ota.h"
 
 #define FIRWARE_SIZE_SLOT0	((uint32_t *)0x0001400CL)
 #define BOOT_MAGIC_SZ		16
@@ -201,7 +202,7 @@ int update_init(void)
 	payload = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
 	if (!payload) {
 		LOG_ERR("Cannot malloc for payload");
-		return 1;
+		return DEGU_OTA_ERR;
 	}
 	memset(payload, 0, MAX_COAP_MSG_LEN);
 
@@ -220,9 +221,8 @@ int update_init(void)
 
 	json_obj_encode_buf(shadow_send_descr, ARRAY_SIZE(shadow_send_descr),
 				&shadow_send, shadow_encoded, sizeof(shadow_encoded));
-	degu_coap_request("thing", COAP_METHOD_POST, shadow_encoded, NULL);
 
-	return 0;
+	return degu_coap_request("thing", COAP_METHOD_POST, shadow_encoded, NULL) < COAP_RESPONSE_CODE_OK ? DEGU_OTA_ERR : DEGU_OTA_OK;
 }
 
 int erase_flash_slot1(void)
@@ -281,7 +281,7 @@ void write_img_magic() {
 int do_update(void)
 {
 	char request_url[1024];
-	int err = 1;
+	int err;
 
 	memset(request_url, 0, 1024);
 
@@ -289,6 +289,14 @@ int do_update(void)
 		&shadow_recv.state.desired, request_url, sizeof(request_url));
 
 	if (update_flag_script_user) {
+		if (degu_coap_request("update/script_user", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
+		if (degu_coap_request("update/script_user", COAP_METHOD_POST, request_url, NULL) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
 		err = fs_stat("/NAND:/main.py", &dirent);
 		if (!err) {
 			fs_unlink("/NAND:/main.py");
@@ -297,18 +305,27 @@ int do_update(void)
 		err = fs_open(&file, "/NAND:/main.py");
 		if(err) {
 			LOG_ERR("Can't open user script");
-			return err;
+			goto error;
 		}
 
-		degu_coap_request("update/script_user", COAP_METHOD_PUT, "", NULL);
-		degu_coap_request("update/script_user", COAP_METHOD_POST, request_url, NULL);
 		memset(payload, 0, 1024);
-		degu_coap_request("update/script_user", COAP_METHOD_GET, payload, &write_file);
+		if (degu_coap_request("update/script_user", COAP_METHOD_GET, payload, &write_file) < COAP_RESPONSE_CODE_OK) {
+			fs_close(&file);
+			goto error;
+		}
 
 		fs_close(&file);
 	}
 
 	if (update_flag_config_user) {
+		if (degu_coap_request("update/config_user", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
+		if (degu_coap_request("update/config_user", COAP_METHOD_POST, request_url, NULL) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
 		err = fs_stat("/NAND:/CONFIG", &dirent);
 		if (!err) {
 			fs_unlink("/NAND:/CONFIG");
@@ -317,13 +334,14 @@ int do_update(void)
 		err = fs_open(&file, "/NAND:/CONFIG");
 		if(err) {
 			LOG_ERR("Can't open config file");
-			return err;
+			goto error;
 		}
 
-		degu_coap_request("update/config_user", COAP_METHOD_PUT, "", NULL);
-		degu_coap_request("update/config_user", COAP_METHOD_POST, request_url, NULL);
 		memset(payload, 0, 1024);
-		degu_coap_request("update/config_user", COAP_METHOD_GET, payload, &write_file);
+		if (degu_coap_request("update/config_user", COAP_METHOD_GET, payload, &write_file) < COAP_RESPONSE_CODE_OK) {
+			fs_close(&file);
+			goto error;
+		}
 
 		fs_close(&file);
 	}
@@ -331,24 +349,41 @@ int do_update(void)
 	if (update_flag_firmware_system) {
 		byte_written = 0;
 
-		degu_coap_request("update/firmware_system", COAP_METHOD_PUT, "", NULL);
-		degu_coap_request("update/firmware_system", COAP_METHOD_POST, request_url, NULL);
+		if (degu_coap_request("update/firmware_system", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
+		if (degu_coap_request("update/firmware_system", COAP_METHOD_POST, request_url, NULL) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
 		memset(payload, 0, 1024);
-		degu_coap_request("update/firmware_system", COAP_METHOD_GET, payload, &write_firmware);
+		if (degu_coap_request("update/firmware_system", COAP_METHOD_GET, payload, &write_firmware) < COAP_RESPONSE_CODE_OK) {
+			goto error;
+		}
+
 		write_img_magic();
 	}
 
-	return 0;
+	return DEGU_OTA_OK;
+
+error:
+	return DEGU_OTA_ERR;
 }
 
 int check_update(void)
 {
 	int diff;
-	int ret = 0;
+	int ret = DEGU_OTA_ERR;
 
-	degu_coap_request("update/status", COAP_METHOD_PUT, "", NULL);
+	if (degu_coap_request("update/status", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+		goto end;
+	}
+
 	memset(payload, 0, 1024);
-	degu_coap_request("update/status", COAP_METHOD_GET, payload, NULL);
+	if (degu_coap_request("update/status", COAP_METHOD_GET, payload, NULL) < COAP_RESPONSE_CODE_OK) {
+		goto end;
+	}
 
 	if (payload != NULL) {
 		json_obj_parse(payload, strlen(payload), shadow_recv_descr,
@@ -359,7 +394,7 @@ int check_update(void)
 					shadow_send.state.reported.script_user_ver);
 			if (diff) {
 				update_flag_script_user = true;
-				ret = 1;
+				ret = DEGU_OTA_OK;
 			}
 		}
 		if (shadow_recv.state.desired.config_user_ver != NULL) {
@@ -367,7 +402,7 @@ int check_update(void)
 					shadow_send.state.reported.config_user_ver);
 			if (diff) {
 				update_flag_config_user = true;
-				ret = 1;
+				ret = DEGU_OTA_OK;
 			}
 		}
 		if (shadow_recv.state.desired.firmware_system_ver != NULL) {
@@ -375,10 +410,11 @@ int check_update(void)
 					shadow_send.state.reported.firmware_system_ver);
 			if (diff) {
 				update_flag_firmware_system = true;
-				ret = 1;
+				ret = DEGU_OTA_OK;
 			}
 		}
 	}
 
+end:
 	return ret;
 }
