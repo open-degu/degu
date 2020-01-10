@@ -31,8 +31,6 @@
 #define COAP_TYPE_ACK 2 //Acknowledgement
 #define COAP_TYPE_RST 3 //Reset
 #define COAP_FAILED_TO_RECEIVE_RESPONSE -1
-#define COAP_ACK_TIMEOUT 2
-#define COAP_MAX_RETRANSMIT 4
 
 int zcoap_request_post(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);
 int zcoap_request_put(int sock, u8_t *path, u8_t *payload, u16_t *payload_len, bool *last_block);

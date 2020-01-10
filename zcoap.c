@@ -41,6 +41,9 @@
 
 #include "zcoap.h"
 
+#define COAP_ACK_TIMEOUT_SEC 2
+#define COAP_MAX_RETRANSMIT 4
+
 LOG_MODULE_REGISTER(zcoap);
 
 static struct coap_block_context blk_ctx;
@@ -141,7 +144,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 		}
 	}
 
-	tv.tv_sec = COAP_ACK_TIMEOUT;
+	tv.tv_sec = COAP_ACK_TIMEOUT_SEC;
 	tv.tv_usec = 0;
 	while (1) {
 		r = send(sock, request.data, request.offset, 0);
