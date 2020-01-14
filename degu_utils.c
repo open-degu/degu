@@ -84,9 +84,9 @@ char *get_gw_addr(unsigned int prefix)
 	return NULL;
 }
 
-void degu_get_asset(void);
-void degu_send_asset(void);
-void degu_connect(void);
+int degu_get_asset(void);
+int degu_send_asset(void);
+int degu_connect(void);
 
 int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *, u16_t))
 {
@@ -147,7 +147,6 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 
 		/* Process by response code */
 		switch (code) {
-		case COAP_FAILED_TO_RECEIVE_RESPONSE:
 		case COAP_RESPONSE_CODE_VALID:
 			/* GW is in progress */
 			break;
@@ -177,16 +176,26 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 		case COAP_RESPONSE_CODE_BAD_REQUEST:
 		case COAP_RESPONSE_CODE_INTERNAL_ERROR:
 			/* Need to send the asset again */
-			degu_send_asset();
+			code = degu_send_asset();
+			if (code < COAP_RESPONSE_CODE_OK){
+				goto end;
+			}
 		case COAP_RESPONSE_CODE_GATEWAY_TIMEOUT:
 			/* Need to make connection again */
-			degu_connect();
+			code = degu_connect();
+			if (code < COAP_RESPONSE_CODE_OK){
+				goto end;
+			}
 			break;
 
 		case COAP_RESPONSE_CODE_NOT_FOUND:
 			/* Need to get the asset from GW again */
-			degu_get_asset();
+			code = degu_get_asset();
+			if (code < COAP_RESPONSE_CODE_OK){
+				goto end;
+			}
 			break;
+
 		default:
 			/* Complete or failed the operation */
 			goto end;
@@ -199,10 +208,11 @@ end:
 	return code;
 }
 
-void degu_get_asset(void)
+int degu_get_asset(void)
 {
 	char *key;
 	char *cert;
+	int  code;
 
 	key = k_malloc(2048);
 	cert = k_malloc(2048);
@@ -212,26 +222,35 @@ void degu_get_asset(void)
 
 	/* At first, we must erase A71CH in here*/
 
-	degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
+	code = degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
+	if (code < COAP_RESPONSE_CODE_OK) {
+		goto end;
+	}
 	/* Write the key to A71CH in here */
 
-	degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
+	code = degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
+	if (code < COAP_RESPONSE_CODE_OK){
+		goto end;
+	}
 	/* Write the cert to A71CH in here */
 
+end:
 	k_free(key);
 	k_free(cert);
+	return code;
 }
 
-void degu_connect(void)
+int degu_connect(void)
 {
-	degu_coap_request("con/connection", COAP_METHOD_PUT, "", NULL);
+	return degu_coap_request("con/connection", COAP_METHOD_PUT, "", NULL);
 }
 
-void degu_send_asset(void)
+int degu_send_asset(void)
 {
 	char *key;
 	char *cert;
 	char timeout[4];
+	int  code;
 
 	key = k_malloc(4096);
 	cert = k_malloc(4096);
@@ -243,12 +262,23 @@ void degu_send_asset(void)
 	strcpy(cert, DEGU_TEST_CERT);
 	strcpy(timeout, DEGU_TEST_TIMEOUT_SEC);
 
-	degu_coap_request("con/key", COAP_METHOD_PUT, key, NULL);
-	degu_coap_request("con/cert", COAP_METHOD_PUT, cert, NULL);
-	degu_coap_request("con/timeout", COAP_METHOD_PUT, timeout, NULL);
+	code = degu_coap_request("con/key", COAP_METHOD_PUT, key, NULL);
+	if (code < COAP_RESPONSE_CODE_OK) {
+		goto end;
+	}
+	code = degu_coap_request("con/cert", COAP_METHOD_PUT, cert, NULL);
+	if (code < COAP_RESPONSE_CODE_OK) {
+		goto end;
+	}
+	code = degu_coap_request("con/timeout", COAP_METHOD_PUT, timeout, NULL);
+	if (code < COAP_RESPONSE_CODE_OK){
+		goto end;
+	}
 
+end:
 	k_free(key);
 	k_free(cert);
+	return code;
 }
 
 void openthread_join_success_handler(struct k_work *work)

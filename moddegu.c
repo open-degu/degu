@@ -33,6 +33,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(degu_update_shadow_obj, degu_update_shadow);
 
 STATIC mp_obj_t degu_get_shadow(void) {
 	vstr_t vstr;
+	int ret;
 	u8_t *payload = (u8_t *)m_malloc(MAX_COAP_MSG_LEN);
 
 	if (!payload) {
@@ -41,9 +42,9 @@ STATIC mp_obj_t degu_get_shadow(void) {
 	}
 	memset(payload, 0, MAX_COAP_MSG_LEN);
 
-	degu_coap_request("thing", COAP_METHOD_GET, payload, NULL);
+	ret = degu_coap_request("thing", COAP_METHOD_GET, payload, NULL);
 
-	if (payload != NULL) {
+	if (payload != NULL && ret >= COAP_RESPONSE_CODE_OK) {
 		vstr_init_len(&vstr, strlen(payload));
 		strcpy(vstr.buf, payload);
 		m_free(payload);

@@ -124,12 +124,12 @@ void main(void) {
 		LOG_ERR("Failed to mount user region");
 	}
 
-	update_init();
-
-	if (check_update()) {
-		LOG_INF("Trying to update...");
-		if (!do_update()) {
-			sys_reboot(SYS_REBOOT_COLD);
+	if(update_init() == DEGU_OTA_OK){
+		if (check_update() == DEGU_OTA_OK) {
+			LOG_INF("Trying to update...");
+			if (do_update() == DEGU_OTA_OK) {
+				sys_reboot(SYS_REBOOT_COLD);
+			}
 		}
 	}
 
@@ -150,4 +150,3 @@ static int cmd_upython(const struct shell *shell, size_t argc, char **argv)
 	return 0;
 }
 SHELL_CMD_REGISTER(upython, NULL, "micropython interpreterx`", cmd_upython);
-
