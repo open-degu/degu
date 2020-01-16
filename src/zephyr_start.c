@@ -36,6 +36,8 @@
 #include <fs.h>
 #include <ff.h>
 #include <logging/log.h>
+#include <stdio.h>
+#include "../version.h"
 LOG_MODULE_REGISTER(main);
 
 int real_main(void);
@@ -111,6 +113,12 @@ no_script:
 
 void main(void) {
 	int err = 0;
+	char version[32];
+
+	sprintf(version, "Degu F/W version: %d.%d.%d\r\n", VERSION_MAJOR,
+					VERSION_MINOR, VERSION_REVISION);
+	console_init();
+	console_write(NULL, version, strlen(version));
 
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_2);
