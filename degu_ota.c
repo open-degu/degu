@@ -36,6 +36,7 @@
 #include "degu_utils.h"
 #include "zcoap.h"
 #include "degu_ota.h"
+#include "version.h"
 
 #define FIRWARE_SIZE_SLOT0	((uint32_t *)0x0001400CL)
 #define BOOT_MAGIC_SZ		16
@@ -61,6 +62,7 @@ u32_t byte_written;
 char script_user_ver[33];
 char config_user_ver[33];
 char firmware_system_ver[33];
+char firmware_ver[33];
 
 bool update_flag_script_user;
 bool update_flag_config_user;
@@ -73,6 +75,7 @@ struct shadow_send {
 			char *config_user_ver;
 			char *firmware_system;
 			char *firmware_system_ver;
+			char *firmware_ver;
 		} reported;
 	} state;
 } shadow_send;
@@ -94,6 +97,7 @@ static const struct json_obj_descr reported_descr[] = {
 	JSON_OBJ_DESCR_PRIM(struct reported, script_user_ver, JSON_TOK_STRING),
 	JSON_OBJ_DESCR_PRIM(struct reported, config_user_ver, JSON_TOK_STRING),
 	JSON_OBJ_DESCR_PRIM(struct reported, firmware_system_ver, JSON_TOK_STRING),
+	JSON_OBJ_DESCR_PRIM(struct reported, firmware_ver, JSON_TOK_STRING),
 };
 
 static const struct json_obj_descr desired_descr[] = {
@@ -218,6 +222,9 @@ int update_init(void)
 
 	firmware_sum(firmware_system_ver);
 	shadow_send.state.reported.firmware_system_ver = firmware_system_ver;
+
+	sprintf(firmware_ver, "%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
+	shadow_send.state.reported.firmware_ver = firmware_ver;
 
 	json_obj_encode_buf(shadow_send_descr, ARRAY_SIZE(shadow_send_descr),
 				&shadow_send, shadow_encoded, sizeof(shadow_encoded));

@@ -3,6 +3,12 @@ cmake_minimum_required(VERSION 3.8)
 include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
 project(NONE)
 
+
+set(DEGU_VERSION_MAJOR 1)
+set(DEGU_VERSION_MINOR 0)
+set(DEGU_VERSION_REVISION 0)
+configure_file("$ENV{ZEPHYR_BASE}/../version.h.in" "$ENV{ZEPHYR_BASE}/../version.h")
+
 target_sources(app PRIVATE src/zephyr_start.c src/zephyr_getchar.c src/power.c)
 
 zephyr_include_directories(
