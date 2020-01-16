@@ -34,9 +34,6 @@
 #define I2C
 #include "libA71CH_api.h"
 
-/* CAUTION: This is just a temoporary! */
-#define DEGU_TEST_TIMEOUT_SEC "300"
-
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
 extern char *net_sprint_addr(sa_family_t af, const void *addr);
 
@@ -265,7 +262,7 @@ int degu_send_asset(void)
 {
 	char *key;
 	char *cert;
-	char timeout[4];
+	/* char timeout[4]; */
 	int  code = 0;
 
 	key = k_malloc(4096);
@@ -285,7 +282,7 @@ int degu_send_asset(void)
 
 	LIBA71CH_finalize();
 
-	strcpy(timeout, DEGU_TEST_TIMEOUT_SEC);
+	/* strcpy(timeout, DEGU_TEST_TIMEOUT_SEC); */
 
 	code = degu_coap_request("con/key", COAP_METHOD_PUT, key, NULL);
 	if (code < COAP_RESPONSE_CODE_OK) {
@@ -295,10 +292,16 @@ int degu_send_asset(void)
 	if (code < COAP_RESPONSE_CODE_OK) {
 		goto end;
 	}
+	/* do not send timeout.
+	   If the shadow update interval is longer than this value,
+	   TLS communication between the Degu gateway and AWS is disconnected.
+	   It takes about 4 seconds to reconnect the connection.
+	   In the future, it will be possible to set the timeout value variably.
 	code = degu_coap_request("con/timeout", COAP_METHOD_PUT, timeout, NULL);
 	if (code < COAP_RESPONSE_CODE_OK){
 		goto end;
 	}
+	*/
 
 end:
 	k_free(key);
