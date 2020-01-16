@@ -5,6 +5,23 @@ project(NONE)
 
 target_sources(app PRIVATE src/zephyr_start.c src/zephyr_getchar.c src/power.c)
 
+zephyr_include_directories(
+  $ENV{ZEPHYR_BASE}/../modules/lib/se_hostlib/inc
+  $ENV{ZEPHYR_BASE}/../modules/lib/se_hostlib/common
+  $ENV{ZEPHYR_BASE}/../modules/lib/se_hostlib/platform
+  $ENV{ZEPHYR_BASE}/../modules/lib/se_hostlib/wrapper
+  )
+
+add_definitions(
+  -DNO_SECURE_CHANNEL_SUPPORT
+  -DZEPHYR
+  -DFTR_FILE_SYSTEM
+  -DTGT_A71CH
+  -DI2C
+  -DMBEDTLS
+  -DSCP_MODE=NO_C_MAC_NO_C_ENC_NO_R_MAC_NO_R_ENC
+  )
+
 add_library(libmicropython STATIC IMPORTED)
 set_target_properties(libmicropython PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libmicropython.a)
 target_link_libraries(app PUBLIC libmicropython)

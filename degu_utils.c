@@ -30,7 +30,9 @@
 #include <stdio.h>
 #include <shell/shell.h>
 #include "zcoap.h"
-#include "degu_test.h"
+
+#define I2C
+#include "libA71CH_api.h"
 
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
 extern char *net_sprint_addr(sa_family_t af, const void *addr);
@@ -212,7 +214,7 @@ int degu_get_asset(void)
 {
 	char *key;
 	char *cert;
-	int  code;
+	int  code = 0;
 
 	key = k_malloc(2048);
 	cert = k_malloc(2048);
@@ -220,20 +222,31 @@ int degu_get_asset(void)
 	memset(key, 0, 2048);
 	memset(cert, 0, 2048);
 
-	/* At first, we must erase A71CH in here*/
+	if (LIBA71CH_open() != 0) {
+		goto end;
+	}
+
+	if (LIBA71CH_eraseKeyAndCert() != 0) {
+		goto a71ch_end;
+	}
 
 	code = degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
 	if (code < COAP_RESPONSE_CODE_OK) {
-		goto end;
+		goto a71ch_end;
 	}
-	/* Write the key to A71CH in here */
 
 	code = degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
 	if (code < COAP_RESPONSE_CODE_OK){
-		goto end;
+		goto a71ch_end;
 	}
-	/* Write the cert to A71CH in here */
 
+	if (LIBA71CH_setKeyAndCert(key, cert)) {
+		code = 0;
+		goto a71ch_end;
+	}
+
+a71ch_end:
+	LIBA71CH_finalize();
 end:
 	k_free(key);
 	k_free(cert);
@@ -249,8 +262,8 @@ int degu_send_asset(void)
 {
 	char *key;
 	char *cert;
-	char timeout[4];
-	int  code;
+	/* char timeout[4]; */
+	int  code = 0;
 
 	key = k_malloc(4096);
 	cert = k_malloc(4096);
@@ -258,9 +271,18 @@ int degu_send_asset(void)
 	memset(key, 0, 4096);
 	memset(cert, 0, 4096);
 
-	strcpy(key, DEGU_TEST_KEY);
-	strcpy(cert, DEGU_TEST_CERT);
-	strcpy(timeout, DEGU_TEST_TIMEOUT_SEC);
+	if (LIBA71CH_open() != 0) {
+		goto end;
+	}
+
+	if (LIBA71CH_getKeyAndCert(key, cert) != 0) {
+		LIBA71CH_finalize();
+		goto end;
+	}
+
+	LIBA71CH_finalize();
+
+	/* strcpy(timeout, DEGU_TEST_TIMEOUT_SEC); */
 
 	code = degu_coap_request("con/key", COAP_METHOD_PUT, key, NULL);
 	if (code < COAP_RESPONSE_CODE_OK) {
@@ -270,10 +292,16 @@ int degu_send_asset(void)
 	if (code < COAP_RESPONSE_CODE_OK) {
 		goto end;
 	}
+	/* do not send timeout.
+	   If the shadow update interval is longer than this value,
+	   TLS communication between the Degu gateway and AWS is disconnected.
+	   It takes about 4 seconds to reconnect the connection.
+	   In the future, it will be possible to set the timeout value variably.
 	code = degu_coap_request("con/timeout", COAP_METHOD_PUT, timeout, NULL);
 	if (code < COAP_RESPONSE_CODE_OK){
 		goto end;
 	}
+	*/
 
 end:
 	k_free(key);
