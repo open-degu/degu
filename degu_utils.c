@@ -191,6 +191,12 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 			break;
 
 		case COAP_RESPONSE_CODE_NOT_FOUND:
+			if ((method == COAP_METHOD_GET) &&
+						(strstr(path,"x509") != NULL)) {
+				/* end procedure, if gw has no degu asset. */
+				goto end;
+			}
+
 			/* Need to get the asset from GW again */
 			code = degu_get_asset();
 			if (code < COAP_RESPONSE_CODE_OK){
@@ -215,6 +221,7 @@ int degu_get_asset(void)
 	char *key;
 	char *cert;
 	int  code = 0;
+	int  code_delete = 0;
 
 	key = k_malloc(2048);
 	cert = k_malloc(2048);
@@ -236,12 +243,18 @@ int degu_get_asset(void)
 	}
 
 	code = degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
-	if (code < COAP_RESPONSE_CODE_OK){
+	if (code < COAP_RESPONSE_CODE_OK) {
 		goto a71ch_end;
 	}
 
 	if (LIBA71CH_setKeyAndCert(key, cert)) {
 		code = 0;
+		goto a71ch_end;
+	}
+
+	/* send DELETE x509/key command, Degu GW delete key and cert both. */
+	code_delete = degu_coap_request("x509/key", COAP_METHOD_DELETE, NULL, NULL);
+	if (code_delete < COAP_RESPONSE_CODE_OK) {
 		goto a71ch_end;
 	}
 
