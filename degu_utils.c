@@ -252,12 +252,8 @@ int degu_get_asset(void)
 		goto a71ch_end;
 	}
 
+	/* send DELETE x509/key command, Degu GW delete key and cert both. */
 	code_delete = degu_coap_request("x509/key", COAP_METHOD_DELETE, NULL, NULL);
-	if (code_delete < COAP_RESPONSE_CODE_OK) {
-		goto a71ch_end;
-	}
-
-	code_delete = degu_coap_request("x509/cert", COAP_METHOD_DELETE, NULL, NULL);
 	if (code_delete < COAP_RESPONSE_CODE_OK) {
 		goto a71ch_end;
 	}
