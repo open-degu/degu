@@ -192,7 +192,7 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 
 		case COAP_RESPONSE_CODE_NOT_FOUND:
 			if ((method == COAP_METHOD_GET) &&
-						(strcmp(path,"x509") == 0)) {
+						(strstr(path,"x509") != NULL)) {
 				/* end procedure, if gw has no degu asset. */
 				goto end;
 			}
