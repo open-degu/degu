@@ -201,6 +201,8 @@ int update_init(void)
 	char shadow_encoded[1024];
 	memset(shadow_encoded, 0, 1024);
 
+	degu_get_asset();
+
 	flash_dev = device_get_binding(DT_FLASH_DEV_NAME);
 
 	payload = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
