@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <shell/shell.h>
 #include "zcoap.h"
+#include "degu_utils.h"
 
 #define I2C
 #include "libA71CH_api.h"
@@ -53,7 +54,7 @@ void get_eui64(char *eui64)
 	}
 }
 
-char *get_gw_addr(unsigned int prefix)
+static char *get_gw_addr(unsigned int prefix)
 {
 	struct net_if *iface;
 	struct net_if_ipv6 *ipv6;
@@ -86,7 +87,6 @@ char *get_gw_addr(unsigned int prefix)
 	return NULL;
 }
 
-int degu_get_asset(void);
 int degu_send_asset(void);
 int degu_connect(void);
 
@@ -177,6 +177,8 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 
 		case COAP_RESPONSE_CODE_BAD_REQUEST:
 		case COAP_RESPONSE_CODE_INTERNAL_ERROR:
+		case COAP_RESPONSE_CODE_FORBIDDEN:
+			degu_get_asset();
 			/* Need to send the asset again */
 			code = degu_send_asset();
 			if (code < COAP_RESPONSE_CODE_OK){
@@ -216,12 +218,67 @@ end:
 	return code;
 }
 
+/**
+ * check A71CH has asset.
+ * @return	1:has asset, 0:no asset
+ */
+static int a71ch_has_asset(void)
+{
+	int hasAsset = 0;
+
+	if (LIBA71CH_open() != 0) {
+		return hasAsset;
+	}
+
+	if (LIBA71CH_hasKeyAndCert()) {
+		hasAsset = 1;
+	}
+
+	LIBA71CH_finalize();
+
+	return hasAsset;
+
+}
+
+/**
+ * update asset on A71CH.
+ * @return	0:success, -1:fail
+ */
+static int a71ch_update_asset(const char *key, const char *cert)
+{
+	int result = 0;
+	int code_delete;
+	if (LIBA71CH_open() != 0) {
+		return -1;
+	}
+
+	if (LIBA71CH_eraseKeyAndCert() != 0) {
+		result = -1;
+		goto a71ch_end;
+	}
+
+	if (LIBA71CH_setKeyAndCert(key, cert)) {
+		result = -1;
+		goto a71ch_end;
+	}
+
+	/* send DELETE x509/key command, Degu GW delete key and cert both. */
+	code_delete = degu_coap_request("x509/key", COAP_METHOD_DELETE, NULL, NULL);
+	if (code_delete < COAP_RESPONSE_CODE_OK) {
+		result = -1;
+		goto a71ch_end;
+	}
+
+a71ch_end:
+	LIBA71CH_finalize();
+	return result;
+}
+
 int degu_get_asset(void)
 {
 	char *key;
 	char *cert;
 	int  code = 0;
-	int  code_delete = 0;
 
 	key = k_malloc(2048);
 	cert = k_malloc(2048);
@@ -229,37 +286,30 @@ int degu_get_asset(void)
 	memset(key, 0, 2048);
 	memset(cert, 0, 2048);
 
-	if (LIBA71CH_open() != 0) {
+	code = degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
+	if (code == COAP_RESPONSE_CODE_NOT_FOUND) {
+		if (a71ch_has_asset()) {
+			code = COAP_RESPONSE_CODE_CONTENT;
+		}
+		goto end;
+	} else if (code < COAP_RESPONSE_CODE_OK) {
 		goto end;
 	}
 
-	if (LIBA71CH_eraseKeyAndCert() != 0) {
-		goto a71ch_end;
-	}
-
-	code = degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
-	if (code < COAP_RESPONSE_CODE_OK) {
-		goto a71ch_end;
-	}
-
 	code = degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
-	if (code < COAP_RESPONSE_CODE_OK) {
-		goto a71ch_end;
+	if (code == COAP_RESPONSE_CODE_NOT_FOUND) {
+		if (a71ch_has_asset()) {
+			code = COAP_RESPONSE_CODE_CONTENT;
+		}
+		goto end;
+	} else if (code < COAP_RESPONSE_CODE_OK) {
+		goto end;
 	}
 
-	if (LIBA71CH_setKeyAndCert(key, cert)) {
+	if (a71ch_update_asset(key, cert) != 0) {
 		code = 0;
-		goto a71ch_end;
 	}
 
-	/* send DELETE x509/key command, Degu GW delete key and cert both. */
-	code_delete = degu_coap_request("x509/key", COAP_METHOD_DELETE, NULL, NULL);
-	if (code_delete < COAP_RESPONSE_CODE_OK) {
-		goto a71ch_end;
-	}
-
-a71ch_end:
-	LIBA71CH_finalize();
 end:
 	k_free(key);
 	k_free(cert);

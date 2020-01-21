@@ -42,7 +42,7 @@
 #include "zcoap.h"
 
 #define COAP_ACK_TIMEOUT_SEC 2
-#define COAP_MAX_RETRANSMIT 4
+#define COAP_MAX_RETRANSMIT 5
 
 LOG_MODULE_REGISTER(zcoap);
 
