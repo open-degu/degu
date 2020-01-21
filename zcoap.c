@@ -64,6 +64,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 	int code;
 	struct timeval tv;
 	u8_t retry;
+	long select_second;
 
 	code = 0;
 	retry = 0;
@@ -144,8 +145,15 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 		}
 	}
 
-	tv.tv_sec = COAP_ACK_TIMEOUT_SEC;
-	tv.tv_usec = 0;
+	/* dummy read */
+	while(1) {
+		rcvd = recv(sock, data, MAX_COAP_MSG_LEN, MSG_DONTWAIT);
+		if (rcvd <= 0) {
+			break;
+		}
+	}
+
+	select_second = COAP_ACK_TIMEOUT_SEC;
 	while (1) {
 		r = send(sock, request.data, request.offset, 0);
 		if (r < 0) {
@@ -155,10 +163,13 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 
 		FD_ZERO(&fds);
 		FD_SET(sock, &fds);
+		tv.tv_sec = select_second;
+		tv.tv_usec = 0;
 		r = select(sock + 1, &fds, NULL, NULL, &tv);
 		if (!r) {
-			LOG_ERR("Receiving response timeout\n");
-			tv.tv_sec *= 2;
+			select_second *= 2;
+			LOG_ERR("Receiving response timeout:next %ld second",
+								select_second);
 			retry ++;
 		}
 		else{
@@ -167,6 +178,7 @@ static int zcoap_request(int sock, u8_t *path, u8_t method, u8_t *payload, u16_t
 
 		if (retry > COAP_MAX_RETRANSMIT) {
 			code = COAP_FAILED_TO_RECEIVE_RESPONSE;
+			LOG_ERR("Retry out\n");
 			goto errorend;
 		}
 	}
