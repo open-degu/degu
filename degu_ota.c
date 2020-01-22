@@ -204,6 +204,10 @@ int update_init(void)
 	degu_get_asset();
 
 	flash_dev = device_get_binding(DT_FLASH_DEV_NAME);
+	if (!flash_dev) {
+		LOG_ERR("failed to device_get_binding()\n");
+		return DEGU_OTA_ERR;
+	}
 
 	payload = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
 	if (!payload) {
@@ -257,9 +261,17 @@ int write_flash_slot1(int written, void *data, int len)
 {
 	int err;
 
-	flash_write_protection_set(flash_dev, false);
+	if (flash_write_protection_set(flash_dev, false)) {
+		LOG_ERR("err flash_write_protection_set(false).\n");
+		return 1;
+	}
+
 	err = flash_write(flash_dev, DT_FLASH_AREA_IMAGE_1_OFFSET + written, data, len);
-	flash_write_protection_set(flash_dev, true);
+
+	if (flash_write_protection_set(flash_dev, true)) {
+		LOG_ERR("err flash_write_protection_set(true).\n");
+	}
+
 	if (err) {
 		return 1;
 	}
@@ -366,6 +378,8 @@ int do_update(void)
 			goto error;
 		}
 
+		erase_flash_slot1();
+
 		memset(payload, 0, 1024);
 		if (degu_coap_request("update/firmware_system", COAP_METHOD_GET, payload, &write_firmware) < COAP_RESPONSE_CODE_OK) {
 			goto error;
@@ -394,33 +408,35 @@ int check_update(void)
 		goto end;
 	}
 
-	if (payload != NULL) {
-		json_obj_parse(payload, strlen(payload), shadow_recv_descr,
-				ARRAY_SIZE(shadow_recv_descr), &shadow_recv);
+	if (!payload) {
+		goto end;
+	}
 
-		if (shadow_recv.state.desired.script_user_ver != NULL) {
-			diff = strcmp(shadow_recv.state.desired.script_user_ver,
-					shadow_send.state.reported.script_user_ver);
-			if (diff) {
-				update_flag_script_user = true;
-				ret = DEGU_OTA_OK;
-			}
+	json_obj_parse(payload, strlen(payload), shadow_recv_descr,
+			ARRAY_SIZE(shadow_recv_descr), &shadow_recv);
+
+	if (shadow_recv.state.desired.script_user_ver != NULL) {
+		diff = strcmp(shadow_recv.state.desired.script_user_ver,
+				shadow_send.state.reported.script_user_ver);
+		if (diff) {
+			update_flag_script_user = true;
+			ret = DEGU_OTA_OK;
 		}
-		if (shadow_recv.state.desired.config_user_ver != NULL) {
-			diff = strcmp(shadow_recv.state.desired.config_user_ver,
-					shadow_send.state.reported.config_user_ver);
-			if (diff) {
-				update_flag_config_user = true;
-				ret = DEGU_OTA_OK;
-			}
+	}
+	if (shadow_recv.state.desired.config_user_ver != NULL) {
+		diff = strcmp(shadow_recv.state.desired.config_user_ver,
+				shadow_send.state.reported.config_user_ver);
+		if (diff) {
+			update_flag_config_user = true;
+			ret = DEGU_OTA_OK;
 		}
-		if (shadow_recv.state.desired.firmware_system_ver != NULL) {
-			diff = strcmp(shadow_recv.state.desired.firmware_system_ver,
-					shadow_send.state.reported.firmware_system_ver);
-			if (diff) {
-				update_flag_firmware_system = true;
-				ret = DEGU_OTA_OK;
-			}
+	}
+	if (shadow_recv.state.desired.firmware_system_ver != NULL) {
+		diff = strcmp(shadow_recv.state.desired.firmware_system_ver,
+				shadow_send.state.reported.firmware_system_ver);
+		if (diff) {
+			update_flag_firmware_system = true;
+			ret = DEGU_OTA_OK;
 		}
 	}
 
