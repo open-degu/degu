@@ -193,15 +193,20 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 			break;
 
 		case COAP_RESPONSE_CODE_NOT_FOUND:
-			if ((method == COAP_METHOD_GET) &&
-						(strstr(path,"x509") != NULL)) {
-				/* end procedure, if gw has no degu asset. */
-				goto end;
+			if (method == COAP_METHOD_GET) {
+				if (strstr(path, "x509") != NULL) {
+					/* end procedure, if gw has no degu asset. */
+					goto end;
+				} else if (strstr(path, "update") != NULL) {
+					/* ota, bad url. */
+					code = COAP_FAILED_TO_RECEIVE_RESPONSE;
+					goto end;
+				}
 			}
 
 			/* Need to get the asset from GW again */
 			code = degu_get_asset();
-			if (code < COAP_RESPONSE_CODE_OK){
+			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
 			break;
