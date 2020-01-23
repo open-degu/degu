@@ -61,24 +61,24 @@ STATIC mp_obj_t mod_suspend(mp_obj_t time_sec)
 {
 	s32_t time_to_wake = mp_obj_get_int(time_sec);
 
-    struct net_if *iface;
-    struct openthread_context *ot_context;
-    otLinkModeConfig config;
-    uint8_t channel;
+	struct net_if *iface;
+	struct openthread_context *ot_context;
+	otLinkModeConfig config;
+	uint8_t channel;
 
-    iface = net_if_get_default();
+	iface = net_if_get_default();
 	ot_context = net_if_l2_data(iface);
-    channel = otLinkGetChannel(ot_context->instance);
-    config = otThreadGetLinkMode(ot_context->instance);
+	channel = otLinkGetChannel(ot_context->instance);
+	config = otThreadGetLinkMode(ot_context->instance);
 
 	sys_pm_ctrl_enable_state(SYS_POWER_STATE_SLEEP_3);
 	sys_set_power_state(SYS_POWER_STATE_SLEEP_3);
 
-    openthread_suspend(ot_context->instance);
+	openthread_suspend(ot_context->instance);
 	k_sleep(K_SECONDS(time_to_wake));
-    openthread_resume(ot_context->instance, channel, config);
+	openthread_resume(ot_context->instance, channel, config);
 
-    sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_3);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_3);
 
 	return mp_const_none;
 }
@@ -86,10 +86,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_suspend_obj, mod_suspend);
 
 STATIC mp_obj_t mod_powerdown(void)
 {
-    degu_ext_device_power(false);
-    sys_pm_ctrl_enable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
+	degu_ext_device_power(false);
+	sys_pm_ctrl_enable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
 	sys_set_power_state(SYS_POWER_STATE_DEEP_SLEEP_1);
-    sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
+	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
 	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_powerdown_obj, mod_powerdown);

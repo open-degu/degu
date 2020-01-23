@@ -69,31 +69,31 @@ void degu_ext_device_power(bool enable)
 
 void openthread_suspend(otInstance *aInstance)
 {
-    otThreadSetEnabled(aInstance, false);
-    otIp6SetEnabled(aInstance, false);
-    otPlatRadioSleep(aInstance);
-    otPlatRadioDisable(aInstance);
+	otThreadSetEnabled(aInstance, false);
+	otIp6SetEnabled(aInstance, false);
+	otPlatRadioSleep(aInstance);
+	otPlatRadioDisable(aInstance);
 }
 
 void openthread_resume(otInstance *aInstance, uint8_t aChannel, otLinkModeConfig aConfig)
 {
-    s64_t uptime = k_uptime_get();
-    u32_t timeout = K_SECONDS(3);
+	s64_t uptime = k_uptime_get();
+	u32_t timeout = K_SECONDS(3);
 
 	u32_t elapsed = 0;
 
-    otPlatRadioEnable(aInstance);
-    otPlatRadioReceive(aInstance, aChannel);
-    otThreadSetLinkMode(aInstance, aConfig);
-    otIp6SetEnabled(aInstance, true);
-    otThreadSetEnabled(aInstance, true);
-    k_usleep(200);
-    while(otThreadGetDeviceRole(aInstance) <= OT_DEVICE_ROLE_DETACHED)
-    {
+	otPlatRadioEnable(aInstance);
+	otPlatRadioReceive(aInstance, aChannel);
+	otThreadSetLinkMode(aInstance, aConfig);
+	otIp6SetEnabled(aInstance, true);
+	otThreadSetEnabled(aInstance, true);
+	k_usleep(200);
+	while(otThreadGetDeviceRole(aInstance) <= OT_DEVICE_ROLE_DETACHED)
+	{
 		elapsed += k_uptime_delta_32(&uptime);
-        if(elapsed >= timeout){
-            break;
-        }
-        k_usleep(USEC_PER_MSEC * 10U);
-    }
+		if(elapsed >= timeout){
+			break;
+		}
+		k_usleep(USEC_PER_MSEC * 10U);
+	}
 }
