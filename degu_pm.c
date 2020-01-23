@@ -35,11 +35,11 @@ void degu_ext_device_power(bool enable)
 	struct device *i2c1 = device_get_binding(DT_I2C_1_NAME);
 
 	if (enable) {
-		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
+		gpio_pin_configure(gpio1, 6, GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio1, 6, 1);
-		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
+		gpio_pin_configure(gpio1, 2, GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio1, 2, 1);
-		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_UP);
+		gpio_pin_configure(gpio0, 26, GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio0, 26, 1);
 
 		device_set_power_state(i2c1, DEVICE_PM_ACTIVE_STATE, NULL, NULL);
@@ -48,17 +48,22 @@ void degu_ext_device_power(bool enable)
 		device_set_power_state(i2c0, DEVICE_PM_SUSPEND_STATE, NULL, NULL);
 		device_set_power_state(i2c1, DEVICE_PM_SUSPEND_STATE, NULL, NULL);
 
-		gpio_pin_configure(gpio0, 26, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_configure(gpio0, 26, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 26, 0);
-		gpio_pin_configure(gpio1, 2, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_configure(gpio1, 2, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio1, 2, 0);
-		gpio_pin_configure(gpio1, 6, GPIO_DIR_OUT|GPIO_PUD_PULL_DOWN);
+		gpio_pin_configure(gpio1, 6, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio1, 6, 0);
 
-		gpio_pin_configure(gpio0, 24, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
+		gpio_pin_configure(gpio0, 24, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 24, 0);
-		gpio_pin_configure(gpio0, 25, GPIO_DIR_IN | GPIO_PUD_PULL_DOWN);
+		gpio_pin_configure(gpio0, 25, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 25, 0);
+
+		gpio_pin_configure(gpio0, 7, GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio0, 7, 0);
+		gpio_pin_configure(gpio1, 8, GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio1, 8, 0);
 	}
 }
 
