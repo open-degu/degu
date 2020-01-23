@@ -175,19 +175,35 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 			payload += 1024;
 			break;
 
-		case COAP_RESPONSE_CODE_BAD_REQUEST:
-		case COAP_RESPONSE_CODE_INTERNAL_ERROR:
+		case COAP_RESPONSE_CODE_UNAUTHORIZED:
+			/* illigal or expired certificate */
 		case COAP_RESPONSE_CODE_FORBIDDEN:
+			/* invalid or duplex certificate */
 			degu_get_asset();
 			/* Need to send the asset again */
 			code = degu_send_asset();
-			if (code < COAP_RESPONSE_CODE_OK){
+			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
+			/* Need to make connection again */
+			degu_connect();
+			code = COAP_FAILED_TO_RECEIVE_RESPONSE;
+			goto end;
+			break;
+
+		case COAP_RESPONSE_CODE_BAD_REQUEST:
+		case COAP_RESPONSE_CODE_INTERNAL_ERROR:
+			degu_get_asset();
+			/* Need to send the asset again */
+			code = degu_send_asset();
+			if (code < COAP_RESPONSE_CODE_OK) {
+				goto end;
+			}
+
 		case COAP_RESPONSE_CODE_GATEWAY_TIMEOUT:
 			/* Need to make connection again */
 			code = degu_connect();
-			if (code < COAP_RESPONSE_CODE_OK){
+			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
 			break;
