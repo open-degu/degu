@@ -59,6 +59,11 @@ void degu_ext_device_power(bool enable)
 		gpio_pin_write(gpio0, 24, 0);
 		gpio_pin_configure(gpio0, 25, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 25, 0);
+
+		gpio_pin_configure(gpio0, 7, GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio0, 7, 0);
+		gpio_pin_configure(gpio1, 8, GPIO_PUD_PULL_DOWN);
+		gpio_pin_write(gpio1, 8, 0);
 	}
 }
 
