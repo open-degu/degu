@@ -38,10 +38,22 @@
 #include <logging/log.h>
 #include <stdio.h>
 #include "../version.h"
+
+#ifdef ROUTER_ONLY
+#include <net/net_if.h>
+#include <net/openthread.h>
+#include <openthread/thread.h>
+#include <openthread/thread_ftd.h>
+#define OT_LEADER_WEIGHT 1
+#endif
+
+
 LOG_MODULE_REGISTER(main);
 
+#ifndef ROUTER_ONLY
 int real_main(void);
 int bg_main(char *src, size_t len);
+#endif
 static const char splash[] = "Start background micropython process.\r\n";
 bool mp_running = 0;
 
@@ -108,7 +120,9 @@ int run_user_script(char *path) {
 	console_write(NULL, version, strlen(version));
 	console_write(NULL, splash, sizeof(splash) - 1);
 
+#ifndef ROUTER_ONLY
 	bg_main(file_data, len);
+#endif
 	fs_close(&file);
 	k_free(file_data);
 	return 1;
@@ -119,18 +133,27 @@ no_script:
 void main(void) {
 	int err = 0;
 
+#ifdef ROUTER_ONLY
+	struct net_if *iface = net_if_get_default();
+	struct openthread_context *ot_context = net_if_l2_data(iface);
+	otThreadSetLocalLeaderWeight(ot_context->instance, OT_LEADER_WEIGHT);
+#endif
+
+#ifdef CONFIG_SYS_POWER_MANAGEMENT
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_2);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_3);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_2);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_3);
+#endif
 
 	err = mount_fat();
 	if (err) {
 		LOG_ERR("Failed to mount user region");
 	}
 
+#ifndef ROUTER_ONLY
 	if(update_init() == DEGU_OTA_OK){
 		if (check_update() == DEGU_OTA_OK) {
 			LOG_INF("Trying to update...");
@@ -141,6 +164,7 @@ void main(void) {
 	}
 
 	mp_running = run_user_script("/NAND:/main.py");
+#endif
 }
 
 static int cmd_upython(const struct shell *shell, size_t argc, char **argv)
@@ -153,7 +177,9 @@ static int cmd_upython(const struct shell *shell, size_t argc, char **argv)
 	}
 
 	console_init();
+#ifndef ROUTER_ONLY
 	real_main();
+#endif
 	return 0;
 }
 SHELL_CMD_REGISTER(upython, NULL, "micropython interpreterx`", cmd_upython);
