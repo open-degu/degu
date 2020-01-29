@@ -229,7 +229,7 @@ int update_init(void)
 	firmware_sum(firmware_system_ver);
 	shadow_send.state.reported.firmware_system_ver = firmware_system_ver;
 
-	sprintf(firmware_ver, "%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
+	sprintf(firmware_ver, "%s.%s.%s", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
 	shadow_send.state.reported.firmware_ver = firmware_ver;
 
 	json_obj_encode_buf(shadow_send_descr, ARRAY_SIZE(shadow_send_descr),

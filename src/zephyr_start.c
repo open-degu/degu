@@ -114,7 +114,7 @@ int run_user_script(char *path) {
 		count -= read;
 	}
 
-	sprintf(version, "Degu F/W version: %d.%d.%d\r\n", VERSION_MAJOR,
+	sprintf(version, "Degu F/W version: %s.%s.%s\r\n", VERSION_MAJOR,
 					VERSION_MINOR, VERSION_REVISION);
 	console_init();
 	console_write(NULL, version, strlen(version));
