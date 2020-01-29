@@ -12,9 +12,13 @@ void device_power(bool enable)
 {
 	if (enable) {
 		sys_pm_resume_devices();
+#ifndef ROUTER_ONLY
 		degu_ext_device_power(true);
+#endif
 	} else {
+#ifndef ROUTER_ONLY
 		degu_ext_device_power(false);
+#endif
 		sys_pm_suspend_devices();
 	}
 }
