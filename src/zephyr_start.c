@@ -139,12 +139,14 @@ void main(void) {
 	otThreadSetLocalLeaderWeight(ot_context->instance, OT_LEADER_WEIGHT);
 #endif
 
+#ifdef CONFIG_SYS_POWER_MANAGEMENT
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_2);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_3);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_2);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_3);
+#endif
 
 	err = mount_fat();
 	if (err) {

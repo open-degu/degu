@@ -71,14 +71,18 @@ STATIC mp_obj_t mod_suspend(mp_obj_t time_sec)
 	channel = otLinkGetChannel(ot_context->instance);
 	config = otThreadGetLinkMode(ot_context->instance);
 
+#ifdef CONFIG_SYS_POWER_MANAGEMENT
 	sys_pm_ctrl_enable_state(SYS_POWER_STATE_SLEEP_3);
 	sys_set_power_state(SYS_POWER_STATE_SLEEP_3);
+#endif
 
 	openthread_suspend(ot_context->instance);
 	k_sleep(K_SECONDS(time_to_wake));
 	openthread_resume(ot_context->instance, channel, config);
 
+#ifdef CONFIG_SYS_POWER_MANAGEMENT
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_3);
+#endif
 
 	return mp_const_none;
 }
@@ -87,13 +91,19 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_suspend_obj, mod_suspend);
 STATIC mp_obj_t mod_powerdown(void)
 {
 	degu_ext_device_power(false);
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
 	sys_pm_suspend_devices();
+#endif
 
+#ifdef CONFIG_SYS_POWER_MANAGEMENT
 	sys_pm_ctrl_enable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
 	sys_set_power_state(SYS_POWER_STATE_DEEP_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_DEEP_SLEEP_1);
+#endif
 
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
 	sys_pm_resume_devices();
+#endif
 	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_powerdown_obj, mod_powerdown);

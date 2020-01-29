@@ -31,8 +31,10 @@ void degu_ext_device_power(bool enable)
 {
 	struct device *gpio0 = device_get_binding(DT_GPIO_P0_DEV_NAME);
 	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
 	struct device *i2c0 = device_get_binding(DT_I2C_0_NAME);
 	struct device *i2c1 = device_get_binding(DT_I2C_1_NAME);
+#endif
 
 	if (enable) {
 		gpio_pin_configure(gpio1, 6, GPIO_PUD_PULL_UP);
@@ -42,12 +44,15 @@ void degu_ext_device_power(bool enable)
 		gpio_pin_configure(gpio0, 26, GPIO_PUD_PULL_UP);
 		gpio_pin_write(gpio0, 26, 1);
 
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
 		device_set_power_state(i2c1, DEVICE_PM_ACTIVE_STATE, NULL, NULL);
 		device_set_power_state(i2c0, DEVICE_PM_ACTIVE_STATE, NULL, NULL);
 	} else {
 		device_set_power_state(i2c0, DEVICE_PM_SUSPEND_STATE, NULL, NULL);
 		device_set_power_state(i2c1, DEVICE_PM_SUSPEND_STATE, NULL, NULL);
-
+#else
+	} else {
+#endif
 		gpio_pin_configure(gpio0, 26, GPIO_PUD_PULL_DOWN);
 		gpio_pin_write(gpio0, 26, 0);
 		gpio_pin_configure(gpio1, 2, GPIO_PUD_PULL_DOWN);
