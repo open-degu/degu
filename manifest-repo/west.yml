@@ -9,6 +9,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: open-degu
       url-base: https://github.com/open-degu
+    - name: micropython
+      url-base: https://github.com/micropython
 
   projects:
     - name: fatfs
@@ -32,6 +34,10 @@ manifest:
       remote: open-degu
       revision: a585c28b89ed9e5c13a56332e85fe474b771def9
       path: modules/lib/se_hostlib
+    - name: micropython
+      remote: micropython
+      revision: e0c6dfe90a3e6265b06265c5b3124c24703776f1
+      path: micropython
     - name: zephyr
       remote: open-degu
       revision: dc15bbc92bd0e819cb012a9fc254fe52f3fe5ae6
