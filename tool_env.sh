@@ -1,2 +1,4 @@
 export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-export ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk
+./select_zephyr_sdk.sh
+EXPORT_SDK=$(cat .cache_path)
+export $EXPORT_SDK
