@@ -7,10 +7,12 @@
 *.dis
 *.exe
 
+.cache_path
 .west
 build/
 outdir/
 prj_degu_evk_merged.conf
+version.h
 
 GPATH
 GRTAGS
