@@ -14,7 +14,7 @@ manifest:
 
   projects:
     - name: fatfs
-      revision: df96914dd989907f3a5de4cb95b116c2f305820d
+      revision: 9ee6b9b9511151d0d64a74d532d39c6f2bbd4f16
       path: modules/fs/fatfs
     - name: hal_nordic
       revision: 7bf2d404d0bf7f36d77d5090b5207f8b4676776c
@@ -40,6 +40,6 @@ manifest:
       path: micropython
     - name: zephyr
       remote: open-degu
-      revision: dc15bbc92bd0e819cb012a9fc254fe52f3fe5ae6
+      revision: 3ca9665cee2808baa04306632487f102677c54ac
       path: zephyr
       west-commands: scripts/west-commands.yml
