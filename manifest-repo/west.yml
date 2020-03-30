@@ -1,0 +1,45 @@
+# The west manifest file for Degu.
+
+manifest:
+  defaults:
+    remote: upstream
+
+  remotes:
+    - name: upstream
+      url-base: https://github.com/zephyrproject-rtos
+    - name: open-degu
+      url-base: https://github.com/open-degu
+    - name: micropython
+      url-base: https://github.com/micropython
+
+  projects:
+    - name: fatfs
+      revision: df96914dd989907f3a5de4cb95b116c2f305820d
+      path: modules/fs/fatfs
+    - name: hal_nordic
+      revision: 7bf2d404d0bf7f36d77d5090b5207f8b4676776c
+      path: modules/hal/nordic
+    - name: mbedtls
+      remote: open-degu
+      revision: c6bd37502bbc616cbcf3a036496e0c7083fbf0ad
+      path: modules/crypto/mbedtls
+    - name: mcumgr
+      revision: 84934959d2d1722a23b7e7e200191ae4a6f96168
+      path: modules/lib/mcumgr
+    - name: openthread
+      remote: open-degu
+      revision: c4c767ae521c214a3279fb10b01d733abc85b7f0
+      path: modules/lib/openthread
+    - name: se_hostlib
+      remote: open-degu
+      revision: a585c28b89ed9e5c13a56332e85fe474b771def9
+      path: modules/lib/se_hostlib
+    - name: micropython
+      remote: micropython
+      revision: e0c6dfe90a3e6265b06265c5b3124c24703776f1
+      path: micropython
+    - name: zephyr
+      remote: open-degu
+      revision: dc15bbc92bd0e819cb012a9fc254fe52f3fe5ae6
+      path: zephyr
+      west-commands: scripts/west-commands.yml
