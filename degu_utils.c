@@ -38,6 +38,8 @@
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
 extern char *net_sprint_addr(sa_family_t af, const void *addr);
 
+static const unsigned int CERT_SIZE = 2048;
+
 void get_eui64(char *eui64)
 {
 	struct net_if *iface;
@@ -87,10 +89,11 @@ static char *get_gw_addr(unsigned int prefix)
 	return NULL;
 }
 
-int degu_send_asset(void);
-int degu_connect(void);
+int degu_send_asset(u8_t *zcoap_buf);
+int degu_connect(u8_t *zcoap_buf);
 
-int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *, u16_t))
+int degu_coap_request(u8_t *path, u8_t method, u8_t *payload,
+			void (*callback)(u8_t *, u16_t), u8_t *zcoap_buf)
 {
 	int sock;
 	struct sockaddr_in6 sockaddr;
@@ -101,6 +104,7 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 	char coap_path[40];
 	int ret;
 	int code = 0;
+	u8_t *zcoap_buf_tmp = NULL;
 
 	while (!net_if_is_up(net_if_get_by_index(1)));
 
@@ -128,21 +132,32 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 
 	snprintf(coap_path, sizeof(coap_path), "%s/%s", path, eui64);
 
+	if (!zcoap_buf) {
+		zcoap_buf_tmp = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
+		if (!zcoap_buf_tmp) {
+			goto end;
+		}
+		zcoap_buf = zcoap_buf_tmp;
+	}
+
 	while (1) {
 		switch (method) {
 		case COAP_METHOD_POST:
 			payload_len = strlen((char*)payload);
-			code = zcoap_request_post(sock, coap_path, payload, &payload_len, &last_block);
+			code = zcoap_request_post(sock, coap_path, payload,
+					&payload_len, &last_block, zcoap_buf);
 			break;
 		case COAP_METHOD_PUT:
 			payload_len = strlen((char*)payload);
-			code = zcoap_request_put(sock, coap_path, payload, &payload_len, &last_block);
+			code = zcoap_request_put(sock, coap_path, payload,
+					&payload_len, &last_block, zcoap_buf);
 			break;
 		case COAP_METHOD_GET:
-			code = zcoap_request_get(sock, coap_path, payload, &payload_len, &last_block);
+			code = zcoap_request_get(sock, coap_path, payload,
+					&payload_len, &last_block, zcoap_buf);
 			break;
 		case COAP_METHOD_DELETE:
-			code = zcoap_request_delete(sock, coap_path);
+			code = zcoap_request_delete(sock, coap_path, zcoap_buf);
 		default:
 			goto end;
 		}
@@ -179,30 +194,30 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 			/* illigal or expired certificate */
 		case COAP_RESPONSE_CODE_FORBIDDEN:
 			/* invalid or duplex certificate */
-			degu_get_asset();
+			degu_get_asset(true, zcoap_buf);
 			/* Need to send the asset again */
-			code = degu_send_asset();
+			code = degu_send_asset(zcoap_buf);
 			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
 			/* Need to make connection again */
-			degu_connect();
+			degu_connect(zcoap_buf);
 			code = COAP_FAILED_TO_RECEIVE_RESPONSE;
 			goto end;
 			break;
 
 		case COAP_RESPONSE_CODE_BAD_REQUEST:
 		case COAP_RESPONSE_CODE_INTERNAL_ERROR:
-			degu_get_asset();
+			degu_get_asset(true, zcoap_buf);
 			/* Need to send the asset again */
-			code = degu_send_asset();
+			code = degu_send_asset(zcoap_buf);
 			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
 
 		case COAP_RESPONSE_CODE_GATEWAY_TIMEOUT:
 			/* Need to make connection again */
-			code = degu_connect();
+			code = degu_connect(zcoap_buf);
 			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
@@ -221,7 +236,7 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 			}
 
 			/* Need to get the asset from GW again */
-			code = degu_get_asset();
+			code = degu_get_asset(false, zcoap_buf);
 			if (code < COAP_RESPONSE_CODE_OK) {
 				goto end;
 			}
@@ -234,6 +249,9 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 	}
 
 end:
+	if (zcoap_buf_tmp) {
+		degu_utils_k_free(zcoap_buf_tmp);
+	}
 	close(sock);
 
 	return code;
@@ -265,7 +283,8 @@ static int a71ch_has_asset(void)
  * update asset on A71CH.
  * @return	0:success, -1:fail
  */
-static int a71ch_update_asset(const char *key, const char *cert)
+static int a71ch_update_asset(const char *key, const char *cert,
+							u8_t *zcoap_buf)
 {
 	int result = 0;
 	int code_delete;
@@ -284,7 +303,8 @@ static int a71ch_update_asset(const char *key, const char *cert)
 	}
 
 	/* send DELETE x509/key command, Degu GW delete key and cert both. */
-	code_delete = degu_coap_request("x509/key", COAP_METHOD_DELETE, NULL, NULL);
+	code_delete = degu_coap_request("x509/key", COAP_METHOD_DELETE,
+							NULL, NULL, zcoap_buf);
 	if (code_delete < COAP_RESPONSE_CODE_OK) {
 		result = -1;
 		goto a71ch_end;
@@ -295,71 +315,104 @@ a71ch_end:
 	return result;
 }
 
-int degu_get_asset(void)
+static char *_key = NULL;
+static char *_cert = NULL;
+
+void free_asset_buf()
 {
-	char *key;
-	char *cert;
-	int  code = 0;
+	if (_key)
+		degu_utils_k_free(_key);
+	if (_cert)
+		degu_utils_k_free(_cert);
 
-	key = k_malloc(2048);
-	cert = k_malloc(2048);
+	_key = NULL;
+	_cert = NULL;
+}
 
-	memset(key, 0, 2048);
-	memset(cert, 0, 2048);
+bool malloc_asset_buf()
+{
+	if (!_key)
+		_key = degu_utils_k_malloc(CERT_SIZE);
 
-	code = degu_coap_request("x509/key", COAP_METHOD_GET, key, NULL);
-	if (code == COAP_RESPONSE_CODE_NOT_FOUND) {
-		if (a71ch_has_asset()) {
-			code = COAP_RESPONSE_CODE_CONTENT;
-		}
-		goto end;
-	} else if (code < COAP_RESPONSE_CODE_OK) {
-		goto end;
+	if (!_cert)
+		_cert = degu_utils_k_malloc(CERT_SIZE);
+
+	if (!_key || !_cert) {
+		free_asset_buf();
+		return false;
 	}
 
-	code = degu_coap_request("x509/cert", COAP_METHOD_GET, cert, NULL);
-	if (code == COAP_RESPONSE_CODE_NOT_FOUND) {
-		if (a71ch_has_asset()) {
-			code = COAP_RESPONSE_CODE_CONTENT;
-		}
-		goto end;
-	} else if (code < COAP_RESPONSE_CODE_OK) {
-		goto end;
+	memset(_key, 0, CERT_SIZE);
+	memset(_cert, 0, CERT_SIZE);
+
+	return true;
+}
+
+int degu_get_asset(bool nextSetAsset, u8_t *zcoap_buf)
+{
+	int code = 0;
+	u8_t *zcoap_buf_tmp = NULL;
+
+	if (!zcoap_buf) {
+		zcoap_buf_tmp = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
+		if (!zcoap_buf_tmp)
+			goto end;
+
+		zcoap_buf = zcoap_buf_tmp;
 	}
 
-	if (a71ch_update_asset(key, cert) != 0) {
+	if (!malloc_asset_buf())
+		goto end;
+
+	code = degu_coap_request("x509/key", COAP_METHOD_GET, _key, NULL,
+								zcoap_buf);
+	if (code == COAP_RESPONSE_CODE_NOT_FOUND) {
+		if (a71ch_has_asset())
+			code = COAP_RESPONSE_CODE_CONTENT;
+		goto end;
+	} else if (code < COAP_RESPONSE_CODE_OK)
+		goto end;
+
+	code = degu_coap_request("x509/cert", COAP_METHOD_GET, _cert, NULL,
+								zcoap_buf);
+	if (code == COAP_RESPONSE_CODE_NOT_FOUND) {
+		if (a71ch_has_asset())
+			code = COAP_RESPONSE_CODE_CONTENT;
+		goto end;
+	} else if (code < COAP_RESPONSE_CODE_OK)
+		goto end;
+
+	if (a71ch_update_asset(_key, _cert, zcoap_buf) != 0)
 		code = 0;
-	}
 
 end:
-	k_free(key);
-	k_free(cert);
+	if (!nextSetAsset )
+		free_asset_buf();
+
+	if (zcoap_buf_tmp)
+		degu_utils_k_free(zcoap_buf_tmp);
+
 	return code;
 }
 
-int degu_connect(void)
+int degu_connect(u8_t *zcoap_buf)
 {
-	return degu_coap_request("con/connection", COAP_METHOD_PUT, "", NULL);
+	return degu_coap_request("con/connection", COAP_METHOD_PUT, "",
+							NULL, zcoap_buf);
 }
 
-int degu_send_asset(void)
+int degu_send_asset(u8_t *zcoap_buf)
 {
-	char *key;
-	char *cert;
 	/* char timeout[4]; */
-	int  code = 0;
+	int code = 0;
 
-	key = k_malloc(4096);
-	cert = k_malloc(4096);
+	if (!malloc_asset_buf())
+		return code;
 
-	memset(key, 0, 4096);
-	memset(cert, 0, 4096);
-
-	if (LIBA71CH_open() != 0) {
+	if (LIBA71CH_open() != 0)
 		goto end;
-	}
 
-	if (LIBA71CH_getKeyAndCert(key, cert) != 0) {
+	if (LIBA71CH_getKeyAndCert(_key, _cert) != 0) {
 		LIBA71CH_finalize();
 		goto end;
 	}
@@ -368,14 +421,16 @@ int degu_send_asset(void)
 
 	/* strcpy(timeout, DEGU_TEST_TIMEOUT_SEC); */
 
-	code = degu_coap_request("con/key", COAP_METHOD_PUT, key, NULL);
-	if (code < COAP_RESPONSE_CODE_OK) {
+	code = degu_coap_request("con/key", COAP_METHOD_PUT, _key,
+							NULL, zcoap_buf);
+	if (code < COAP_RESPONSE_CODE_OK)
 		goto end;
-	}
-	code = degu_coap_request("con/cert", COAP_METHOD_PUT, cert, NULL);
-	if (code < COAP_RESPONSE_CODE_OK) {
+
+	code = degu_coap_request("con/cert", COAP_METHOD_PUT, _cert,
+							NULL, zcoap_buf);
+	if (code < COAP_RESPONSE_CODE_OK)
 		goto end;
-	}
+
 	/* do not send timeout.
 	   If the shadow update interval is longer than this value,
 	   TLS communication between the Degu gateway and AWS is disconnected.
@@ -388,16 +443,27 @@ int degu_send_asset(void)
 	*/
 
 end:
-	k_free(key);
-	k_free(cert);
+	free_asset_buf();
 	return code;
+}
+
+void *degu_utils_k_malloc(size_t size)
+{
+	if (size < (CONFIG_HEAP_MEM_POOL_SIZE / 64) ) {
+		size = (CONFIG_HEAP_MEM_POOL_SIZE / 64);
+		size += (4 - size % 4);
+	}
+	return k_malloc(size);
+}
+
+void degu_utils_k_free(void *ptr)
+{
+	k_free(ptr);
 }
 
 void openthread_join_success_handler(struct k_work *work)
 {
 	struct device *gpio1 = device_get_binding(DT_GPIO_P1_DEV_NAME);
-
-	degu_get_asset();
 
 	gpio_pin_configure(gpio1, 7, GPIO_DIR_OUT);
 	gpio_pin_write(gpio1, 7, 0);

@@ -55,8 +55,6 @@ struct device *flash_dev;
 struct fs_file_t file;
 struct fs_dirent dirent;
 
-u16_t payload_len;
-u8_t *payload;
 u32_t byte_written;
 
 char script_user_ver[33];
@@ -139,9 +137,8 @@ static char *md5sum(char *buf, int len)
 
 static int user_sum(char *path, char *md5)
 {
-	int err, offset = 0;
+	int err;
 	char *file_data;
-	int count = INT_MAX;
 	int read = 0;
 
 	err = fs_stat(path, &dirent);
@@ -158,29 +155,24 @@ static int user_sum(char *path, char *md5)
 		return 1;
 	}
 
-	if (offset > 0) {
-		fs_seek(&file, offset, FS_SEEK_SET);
-	}
-
-	file_data = k_malloc(dirent.size);
+	file_data = degu_utils_k_malloc(dirent.size);
 	if (!file_data) {
 		LOG_ERR("Cannot malloc for a user file");
+		fs_close(&file);
 		return 1;
 	}
 
-	while(1){
-		read = fs_read(&file, file_data + offset, MIN(count, sizeof(file_data)));
-		if (read <= 0) {
-			break;
-		}
-		offset += read;
-		count -= read;
+	read = fs_read(&file, file_data, dirent.size);
+	if (read <= 0) {
+		degu_utils_k_free(file_data);
+		fs_close(&file);
+		return 1;
 	}
 
 	strcpy(md5, md5sum(file_data, dirent.size));
-	LOG_INF("%s : %s\n", path, md5);
+	LOG_INF("%s : %s\n", log_strdup(path), log_strdup(md5));
 
-	k_free(file_data);
+	degu_utils_k_free(file_data);
 	fs_close(&file);
 
 	return 0;
@@ -191,30 +183,38 @@ static int firmware_sum(char *md5)
 	int size = *FIRWARE_SIZE_SLOT0 + 848;
 
 	strcpy(md5, md5sum((char *)DT_FLASH_AREA_IMAGE_0_OFFSET, size));
-	LOG_INF("firmware size: %d, md5sum: %s", size, md5);
+	LOG_INF("firmware size: %d, md5sum: %s", size, log_strdup(md5));
 
 	return 0;
 }
 
 int update_init(void)
 {
-	char shadow_encoded[1024];
-	memset(shadow_encoded, 0, 1024);
+	char *shadow_encoded;
+	int code;
+	u8_t *zcoap_buf = NULL;
 
-	degu_get_asset();
+	zcoap_buf = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
+	if (!zcoap_buf) {
+		return DEGU_OTA_ERR;
+	}
+
+	degu_get_asset(false, zcoap_buf);
 
 	flash_dev = device_get_binding(DT_FLASH_DEV_NAME);
 	if (!flash_dev) {
 		LOG_ERR("failed to device_get_binding()\n");
+		degu_utils_k_free(zcoap_buf);
 		return DEGU_OTA_ERR;
 	}
 
-	payload = (u8_t *)k_malloc(MAX_COAP_MSG_LEN);
-	if (!payload) {
-		LOG_ERR("Cannot malloc for payload");
+	shadow_encoded = degu_utils_k_malloc(1024);
+	if (!shadow_encoded) {
+		LOG_ERR("Cannot malloc for shadow_encoded");
+		degu_utils_k_free(zcoap_buf);
 		return DEGU_OTA_ERR;
 	}
-	memset(payload, 0, MAX_COAP_MSG_LEN);
+	memset(shadow_encoded, 0, 1024);
 
 	update_flag_script_user = false;
 	update_flag_config_user = false;
@@ -233,9 +233,13 @@ int update_init(void)
 	shadow_send.state.reported.firmware_ver = firmware_ver;
 
 	json_obj_encode_buf(shadow_send_descr, ARRAY_SIZE(shadow_send_descr),
-				&shadow_send, shadow_encoded, sizeof(shadow_encoded));
+				&shadow_send, shadow_encoded, 1024);
 
-	return degu_coap_request("thing", COAP_METHOD_POST, shadow_encoded, NULL) < COAP_RESPONSE_CODE_OK ? DEGU_OTA_ERR : DEGU_OTA_OK;
+	code = degu_coap_request("thing", COAP_METHOD_POST, shadow_encoded, NULL, zcoap_buf);
+	degu_utils_k_free(shadow_encoded);
+	degu_utils_k_free(zcoap_buf);
+
+	return (code < COAP_RESPONSE_CODE_OK) ? DEGU_OTA_ERR : DEGU_OTA_OK;
 }
 
 int erase_flash_slot1(void)
@@ -303,18 +307,39 @@ int do_update(void)
 {
 	char request_url[1024];
 	int err;
+	u8_t *payload = NULL;
+	u8_t *zcoap_buf = NULL;
 
+	if (!update_flag_script_user && !update_flag_config_user &&
+						!update_flag_firmware_system) {
+		return DEGU_OTA_OK;
+	}
+
+	zcoap_buf = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
+	if (!zcoap_buf) {
+		LOG_ERR("Cannot malloc for zcoap");
+		return DEGU_OTA_ERR;
+	}
+
+	payload = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
+	if (!payload) {
+		LOG_ERR("Cannot malloc for payload");
+		degu_utils_k_free(zcoap_buf);
+		return DEGU_OTA_ERR;
+	}
 	memset(request_url, 0, 1024);
 
 	json_obj_encode_buf(desired_descr, ARRAY_SIZE(desired_descr),
 		&shadow_recv.state.desired, request_url, sizeof(request_url));
 
 	if (update_flag_script_user) {
-		if (degu_coap_request("update/script_user", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/script_user", COAP_METHOD_PUT,
+				"", NULL, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
-		if (degu_coap_request("update/script_user", COAP_METHOD_POST, request_url, NULL) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/script_user", COAP_METHOD_POST,
+			request_url, NULL, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
@@ -329,8 +354,9 @@ int do_update(void)
 			goto error;
 		}
 
-		memset(payload, 0, 1024);
-		if (degu_coap_request("update/script_user", COAP_METHOD_GET, payload, &write_file) < COAP_RESPONSE_CODE_OK) {
+		memset(payload, 0, MAX_COAP_MSG_LEN);
+		if (degu_coap_request("update/script_user", COAP_METHOD_GET,
+			payload, &write_file, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			fs_close(&file);
 			goto error;
 		}
@@ -339,11 +365,13 @@ int do_update(void)
 	}
 
 	if (update_flag_config_user) {
-		if (degu_coap_request("update/config_user", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/config_user", COAP_METHOD_PUT,
+				"", NULL, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
-		if (degu_coap_request("update/config_user", COAP_METHOD_POST, request_url, NULL) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/config_user", COAP_METHOD_POST,
+			request_url, NULL, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
@@ -359,7 +387,8 @@ int do_update(void)
 		}
 
 		memset(payload, 0, 1024);
-		if (degu_coap_request("update/config_user", COAP_METHOD_GET, payload, &write_file) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/config_user", COAP_METHOD_GET,
+			payload, &write_file, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			fs_close(&file);
 			goto error;
 		}
@@ -370,27 +399,34 @@ int do_update(void)
 	if (update_flag_firmware_system) {
 		byte_written = 0;
 
-		if (degu_coap_request("update/firmware_system", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/firmware_system", COAP_METHOD_PUT,
+					"", NULL, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
-		if (degu_coap_request("update/firmware_system", COAP_METHOD_POST, request_url, NULL) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/firmware_system", COAP_METHOD_POST,
+				request_url, NULL, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
 		erase_flash_slot1();
 
 		memset(payload, 0, 1024);
-		if (degu_coap_request("update/firmware_system", COAP_METHOD_GET, payload, &write_firmware) < COAP_RESPONSE_CODE_OK) {
+		if (degu_coap_request("update/firmware_system", COAP_METHOD_GET,
+			payload, &write_firmware, zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 			goto error;
 		}
 
 		write_img_magic();
 	}
 
+	degu_utils_k_free(payload);
+	degu_utils_k_free(zcoap_buf);
 	return DEGU_OTA_OK;
 
 error:
+	degu_utils_k_free(payload);
+	degu_utils_k_free(zcoap_buf);
 	return DEGU_OTA_ERR;
 }
 
@@ -398,17 +434,30 @@ int check_update(void)
 {
 	int diff;
 	int ret = DEGU_OTA_ERR;
+	u8_t *payload = NULL;
+	u8_t *zcoap_buf = NULL;
 
-	if (degu_coap_request("update/status", COAP_METHOD_PUT, "", NULL) < COAP_RESPONSE_CODE_OK) {
-		goto end;
+	zcoap_buf = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
+	if (!zcoap_buf) {
+		LOG_ERR("Cannot malloc for zcoap");
+		return DEGU_OTA_ERR;
 	}
 
-	memset(payload, 0, 1024);
-	if (degu_coap_request("update/status", COAP_METHOD_GET, payload, NULL) < COAP_RESPONSE_CODE_OK) {
-		goto end;
-	}
-
+	payload = degu_utils_k_malloc(MAX_COAP_MSG_LEN);
 	if (!payload) {
+		LOG_ERR("Cannot malloc for payload");
+		degu_utils_k_free(zcoap_buf);
+		return ret;
+	}
+
+	if (degu_coap_request("update/status", COAP_METHOD_PUT, "", NULL,
+					zcoap_buf) < COAP_RESPONSE_CODE_OK) {
+		goto end;
+	}
+
+	memset(payload, 0, MAX_COAP_MSG_LEN);
+	if (degu_coap_request("update/status", COAP_METHOD_GET, payload, NULL,
+					zcoap_buf) < COAP_RESPONSE_CODE_OK) {
 		goto end;
 	}
 
@@ -441,5 +490,7 @@ int check_update(void)
 	}
 
 end:
+	degu_utils_k_free(payload);
+	degu_utils_k_free(zcoap_buf);
 	return ret;
 }
