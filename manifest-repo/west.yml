@@ -40,6 +40,6 @@ manifest:
       path: micropython
     - name: zephyr
       remote: open-degu
-      revision: 3ca9665cee2808baa04306632487f102677c54ac
+      revision: b07d01029a150a2e896ede9a0b544d842a54991e
       path: zephyr
       west-commands: scripts/west-commands.yml

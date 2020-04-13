@@ -25,7 +25,8 @@ STATIC mp_obj_t degu_check_update(void) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(degu_check_update_obj, degu_check_update);
 
 STATIC mp_obj_t degu_update_shadow(mp_obj_t shadow) {
-	int ret = degu_coap_request("thing", COAP_METHOD_POST, (u8_t *)mp_obj_str_get_str(shadow), NULL);
+	int ret = degu_coap_request("thing", COAP_METHOD_POST,
+				(u8_t *)mp_obj_str_get_str(shadow), NULL, NULL);
 
 	return mp_obj_new_int(ret);
 }
@@ -42,7 +43,7 @@ STATIC mp_obj_t degu_get_shadow(void) {
 	}
 	memset(payload, 0, MAX_COAP_MSG_LEN);
 
-	ret = degu_coap_request("thing", COAP_METHOD_GET, payload, NULL);
+	ret = degu_coap_request("thing", COAP_METHOD_GET, payload, NULL, NULL);
 
 	if (payload != NULL && ret >= COAP_RESPONSE_CODE_OK) {
 		vstr_init_len(&vstr, strlen(payload));

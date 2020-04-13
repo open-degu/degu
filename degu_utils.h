@@ -22,6 +22,14 @@
  * THE SOFTWARE.
  */
 
+#ifndef __DEGU_UTILS_H__
+#define __DEGU_UTILS_H__
+
 void get_eui64(char *eui64);
-int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u8_t *, u16_t));
-int degu_get_asset(void);
+int degu_coap_request(u8_t *path, u8_t method, u8_t *payload,
+			void (*callback)(u8_t *, u16_t), u8_t *zcoap_buf);
+int degu_get_asset(bool nextSetAsset, u8_t *zcoap_buf);
+void *degu_utils_k_malloc(size_t size);
+void degu_utils_k_free(void *ptr);
+
+#endif /* __DEGU_UTILS_H__ */

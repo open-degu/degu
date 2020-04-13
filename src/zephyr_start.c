@@ -28,6 +28,7 @@
 #include <power.h>
 #include "zephyr_getchar.h"
 #include "../degu_ota.h"
+#include "../degu_utils.h"
 #include <shell/shell.h>
 #include <sys/util.h>
 #include <init.h>
@@ -102,7 +103,7 @@ int run_user_script(char *path) {
 		fs_seek(&file, offset, FS_SEEK_SET);
 	}
 	len = dirent.size;
-	file_data = k_malloc(len);
+	file_data = degu_utils_k_malloc(len);
 	int count = INT_MAX;
 	int read = 0;
 	while(1){
@@ -124,7 +125,7 @@ int run_user_script(char *path) {
 	bg_main(file_data, len);
 #endif
 	fs_close(&file);
-	k_free(file_data);
+	degu_utils_k_free(file_data);
 	return 1;
 no_script:
 	return 0;
