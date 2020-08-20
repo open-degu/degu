@@ -29,9 +29,9 @@ add_definitions(
   -DROUTER_ONLY
   )
 
-#add_library(libmicropython STATIC IMPORTED)
-#set_target_properties(libmicropython PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libmicropython.a)
-#target_link_libraries(app PUBLIC libmicropython)
+add_library(libmicropython STATIC IMPORTED)
+set_target_properties(libmicropython PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libmicropython.a)
+target_link_libraries(app PUBLIC libmicropython)
 
 zephyr_get_include_directories_for_lang_as_string(C includes)
 zephyr_get_system_include_directories_for_lang_as_string(C system_includes)

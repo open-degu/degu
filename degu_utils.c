@@ -31,12 +31,51 @@
 #include <shell/shell.h>
 #include "zcoap.h"
 #include "degu_utils.h"
+#include "degu_routing.h"
+#include <string.h>
+#include <openthread/udp.h>
+#include <openthread/thread.h>
+#include <openthread/message.h>
+#include <openthread/ip6.h>
 
 #define I2C
 #include "libA71CH_api.h"
 
 extern char *net_byte_to_hex(char *ptr, u8_t byte, char base, bool pad);
 extern char *net_sprint_addr(sa_family_t af, const void *addr);
+char gw_addr[NET_IPV6_ADDR_LEN] = "ff03::1";
+
+static int Swap16(int before_swap)
+{
+	int after_swap;
+	after_swap = ( (((before_swap) >> 8) & 0x00FF) | (((before_swap) << 8) & 0xFF00) );
+	return after_swap;
+}
+
+void UDPmessageHandler(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+{
+	char buf_ipv6[NET_IPV6_ADDR_LEN];
+	int equal_cmp, length;
+	char buf_mesg[256];
+	length = otMessageRead(aMessage, otMessageGetOffset(aMessage), buf_mesg, sizeof(buf_mesg) - 1);
+	buf_mesg[length] = '\0';
+	equal_cmp = strcmp(buf_mesg, "degu::mcast");
+	if (equal_cmp == 0) {
+	        sprintf(buf_ipv6, "%x:%x:%x:%x:%x:%x:%x:%x",
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[0]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[1]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[2]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[3]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[4]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[5]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[6]),
+                   Swap16(aMessageInfo->mPeerAddr.mFields.m16[7]));
+		strcpy(gw_addr, buf_ipv6);
+	}
+	OT_UNUSED_VARIABLE(aContext);
+	OT_UNUSED_VARIABLE(aMessage);
+	OT_UNUSED_VARIABLE(aMessageInfo);
+}
 
 void get_eui64(char *eui64)
 {
@@ -53,7 +92,7 @@ void get_eui64(char *eui64)
 		(*buf)++;
 	}
 }
-
+#if 0
 static char *get_gw_addr(unsigned int prefix)
 {
 	struct net_if *iface;
@@ -86,6 +125,7 @@ static char *get_gw_addr(unsigned int prefix)
 
 	return NULL;
 }
+#endif
 
 int degu_send_asset(void);
 int degu_connect(void);
@@ -96,7 +136,6 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 	struct sockaddr_in6 sockaddr;
 	u16_t payload_len;
 	bool last_block = false;
-	char gw_addr[NET_IPV6_ADDR_LEN];
 	char eui64[17];
 	char coap_path[40];
 	int ret;
@@ -111,7 +150,6 @@ int degu_coap_request(u8_t *path, u8_t method, u8_t *payload, void (*callback)(u
 
 	sockaddr.sin6_family = AF_INET6;
 
-	strcpy(gw_addr, get_gw_addr(64));
 	ret = zsock_inet_pton(AF_INET6, gw_addr, &sockaddr.sin6_addr);
 	if (ret <= 0) {
 		goto end;
