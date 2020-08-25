@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <misc/printk.h>
 #include <net/net_ip.h>
 #include <net/net_if.h>
 #include <net/socket.h>
@@ -71,6 +72,7 @@ void UDPmessageHandler(void *aContext, otMessage *aMessage, const otMessageInfo 
                    Swap16(aMessageInfo->mPeerAddr.mFields.m16[6]),
                    Swap16(aMessageInfo->mPeerAddr.mFields.m16[7]));
 		strcpy(gw_addr, buf_ipv6);
+		printk("Passed gateway address success: %s\n", gw_addr);
 	}
 	OT_UNUSED_VARIABLE(aContext);
 	OT_UNUSED_VARIABLE(aMessage);
