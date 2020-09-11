@@ -28,6 +28,8 @@
 #include <power.h>
 #include "zephyr_getchar.h"
 #include "../degu_ota.h"
+#include "../degu_utils.h"
+#include "utils/code_utils.h"
 #include <shell/shell.h>
 #include <sys/util.h>
 #include <init.h>
@@ -38,15 +40,16 @@
 #include <logging/log.h>
 #include <stdio.h>
 #include "../version.h"
-
-#ifdef ROUTER_ONLY
 #include <net/net_if.h>
 #include <net/openthread.h>
 #include <openthread/thread.h>
 #include <openthread/thread_ftd.h>
+#include <openthread/message.h>
+#include <openthread/udp.h>
+#include <openthread/instance.h>
+#ifdef ROUTER_ONLY
 #define OT_LEADER_WEIGHT 1
 #endif
-
 
 LOG_MODULE_REGISTER(main);
 
@@ -54,6 +57,7 @@ LOG_MODULE_REGISTER(main);
 int real_main(void);
 int bg_main(char *src, size_t len);
 #endif
+
 static const char splash[] = "Start background micropython process.\r\n";
 bool mp_running = 0;
 
@@ -133,12 +137,13 @@ no_script:
 void main(void) {
 	int err = 0;
 
-#ifdef ROUTER_ONLY
 	struct net_if *iface = net_if_get_default();
 	struct openthread_context *ot_context = net_if_l2_data(iface);
+#ifdef ROUTER_ONLY
 	otThreadSetLocalLeaderWeight(ot_context->instance, OT_LEADER_WEIGHT);
 #endif
-
+	initUDP_route(ot_context->instance);
+	sendUDP_route(ot_context->instance);
 #ifdef CONFIG_SYS_POWER_MANAGEMENT
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_1);
 	sys_pm_ctrl_disable_state(SYS_POWER_STATE_SLEEP_2);
@@ -182,4 +187,5 @@ static int cmd_upython(const struct shell *shell, size_t argc, char **argv)
 #endif
 	return 0;
 }
+
 SHELL_CMD_REGISTER(upython, NULL, "micropython interpreterx`", cmd_upython);

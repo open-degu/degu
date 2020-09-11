@@ -41,6 +41,7 @@ SRC_C = main.c \
 	degu_utils.c \
 	degu_ota.c \
 	degu_pm.c \
+	degu_routing.c \
 	zcoap.c \
 	help.c \
 	modusocket.c \
